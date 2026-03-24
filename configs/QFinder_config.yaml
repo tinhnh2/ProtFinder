@@ -1,0 +1,62 @@
+# Configuration file for QFinder model training
+
+# Model parameters
+model:
+  num_classes: 7  # LG, WAG, JTT, Q.plant, Q.bird, Q.mammal, Q.pfam
+
+# Training parameters
+training:
+  learning_rate: 0.0001
+  weight_decay: 0.00068
+  batch_size: 64
+  pin_memory: true  # True for CUDA, False for MPS
+  learning_rate_tuning: 0.00005
+
+# Learning rate scheduler
+lr_scheduler:
+  patience: 5
+  threshold: 0.0002  # Validation accuracy improvement of 0.02%
+  factor: 0.1
+  mode: "max"
+
+# Early stopping
+early_stopping:
+  monitor: "val_acc"
+  mode: "max"
+  patience: 10
+  min_delta: 0.002  # Validation accuracy improvement of 0.02%
+  min_delta_tuning: 0.01
+  patience_tuning: 5
+
+# Data paths
+data:
+  train_val_h5_paths: [./hdf5_features/QFinder_feature_train_val.h5]  # HDF5 file containing train and val groups
+  joint_h5_paths: [./hdf5_features_joint/QFinder_feature_train_val.h5]
+  real_h5_paths: [./hdf5_features_real_15330/QFinder_feature_train_val.h5]
+
+# Training settings
+trainer:                                                                 
+  accelerator: "auto"  # "gpu", "cpu", or "auto"
+  devices: "auto"  # Number of devices or "auto"
+  precision: "16-mixed"  # Mixed precision training
+  gradient_clip_val: null  # Gradient clipping
+  max_epochs: 100
+  max_epochs_tuning: 50
+  check_val_every_n_epoch: 1  # Run validation loop every N training epochs
+  log_every_n_steps: 50  # Log metrics every N steps
+
+# Checkpointing
+checkpoint:
+  save_top_k: 1  # Save top k models based on monitor metric
+  monitor: "val_acc"
+  mode: "max"
+  filename: "QFinder-{epoch:02d}-{val_acc:.4f}"
+  filename_tuning: "QFinder-tuning-{epoch:02d}-{val_acc:.4f}"
+  save_last: true  # Save last checkpoint
+  every_n_epochs: 5  # Save checkpoint every N epochs
+
+# Logging
+logging:
+  logger: "tensorboard"
+  log_dir: "lightning_logs2"
+  name: "QFinder"
