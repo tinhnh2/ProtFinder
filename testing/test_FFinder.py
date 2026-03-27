@@ -11,6 +11,7 @@ Usage:
 import argparse
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import h5py
 import joblib
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score
@@ -37,6 +38,7 @@ def load_data_from_hdf5(h5_paths, group_name):
     
     features = []
     labels = []
+    keys_all = []
     
     for h5_path in h5_paths:
         with h5py.File(h5_path, 'r') as h5_file:
@@ -47,11 +49,12 @@ def load_data_from_hdf5(h5_paths, group_name):
                 data = group[key][:].astype(np.float32)
                 features.append(data)
                 labels.append(int(key[0]))
+                keys_all.append(key)
     
     X = np.vstack(features)
     y = np.array(labels)
     
-    return X, y
+    return X, y, keys_all
 
 def find_best_threshold(y_true, y_prob):
     thresholds = np.linspace(0.05, 0.95, 181)
@@ -79,27 +82,31 @@ def test_FFinder(model_path: str, h5_paths: list):
     clf = joblib.load(model_path)
     
     print("Loading test data")
-    X, y = load_data_from_hdf5(h5_paths, "test")
-    print(X)
-    print(y)
+    X, y, keys = load_data_from_hdf5(h5_paths, "test")
     print(f"Test samples: {X.shape[0]}, Features: {X.shape[1]}")
     
     print("Running predictions")
     y_prob = clf.predict_proba(X)[:,1]
-    """
-    from sklearn.metrics import precision_recall_curve
-
-    precision, recall, thresholds = precision_recall_curve(y, y_prob)
-
-    idx = np.where(recall >= 0.9)[0][-1]
-    best_t = thresholds[idx]
-    print("Threshold for recall >= 0.9:", best_t)
-    """
-    #y_pred = clf.predict(X)
     y_pred = (y_prob >= 0.5).astype(int)
     accuracy = accuracy_score(y, y_pred)
     balanced_acc = balanced_accuracy_score(y, y_pred)
     class_names = ['-F', '+F']
+    # ===== ✅ Convert label index → name =====
+    true_names = [class_names[x] for x in y]
+    pred_names = [class_names[x] for x in y_pred]
+
+    # ===== ✅ Save CSV =====
+    df = pd.DataFrame({
+        "alignment": keys,
+        "true_label": true_names,
+        "predicted_label": pred_names
+    })
+
+    df["correct"] = (df["true_label"] == df["predicted_label"])
+
+    df.to_csv("results_ffinder.csv", index=False)
+
+    print("\nSaved results to results_ffinder.csv")
     
     report_str = classification_report(
         y,
@@ -143,13 +150,13 @@ def test_FFinder(model_path: str, h5_paths: list):
 def main():
     parser = argparse.ArgumentParser(description="Test FFinder model")
     parser.add_argument(
-        "--model_path",
+        "--checkpoint",
         type=str,
         required=True,
         help="Path to trained model (joblib file)"
     )
     parser.add_argument(
-        "--h5_paths",
+        "--h5_test_paths",
         type=str,
         nargs="+",
         default=["./hdf5_features/FFinder_feature_test.h5"],
@@ -161,8 +168,8 @@ def main():
     import time
     start_total = time.perf_counter()
     test_FFinder(
-        model_path=args.model_path,
-        h5_paths=args.h5_paths
+        model_path=args.checkpoint,
+        h5_paths=args.h5_test_paths
     )
     end_total = time.perf_counter()
     total_time = end_total - start_total

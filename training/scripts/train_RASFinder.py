@@ -13,8 +13,10 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
+import numpy as np
 import torch
 import sys
+from collections import Counter
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from training.modules import RASFinderLightningModule
@@ -29,6 +31,26 @@ def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
+
+
+def compute_class_weights(y: np.ndarray, num_classes: int) -> torch.Tensor:
+    """
+    Compute balanced class weights from label array.
+
+    Formula: weight[c] = total_samples / (num_classes * count[c])
+    This is equivalent to sklearn's 'balanced' strategy.
+
+    Args:
+        y: Numpy array of integer labels
+        num_classes: Total number of classes
+
+    Returns:
+        FloatTensor of shape (num_classes,)
+    """
+    counts = np.bincount(y, minlength=num_classes).astype(np.float64)
+    total = len(y)
+    weights = total / (num_classes * np.where(counts == 0, 1, counts))
+    return torch.tensor(weights, dtype=torch.float32)
 
 
 def create_data_loaders(config, group_name= "train"):
@@ -84,6 +106,9 @@ def main():
         action="store_true",
         help="Run a quick test (1 batch, 1 epoch)"
     )
+    parser.add_argument("--class_weights",
+        action="store_true",
+        help="Enable class weighting (use uniform loss)")
     
     args = parser.parse_args()
     
@@ -98,6 +123,22 @@ def main():
     
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples: {len(val_loader.dataset)}")
+    class_weights = None
+    num_classes = 4
+    if args.class_weights:
+        print("\nComputing class weights from simulation + real training data...")
+        train_labels = collect_labels(train_loader)
+        classes, counts = np.unique(train_labels, return_counts=True)
+        total = len(train_labels)
+
+        print("Class Distribution:")
+        class_names = ['None', '+I', '+G', '+G+I']
+        for cls, cnt in zip(classes, counts):
+            name = class_names[cls] if cls < len(class_names) else str(cls)
+            print(f"  Class {cls} ({name}): {cnt} samples ({100*cnt/total:.1f}%)")
+
+        class_weights = compute_class_weights(train_labels, num_classes)
+        print(f"Class weights: {class_weights.tolist()}")
     
     # Create model
     print("Creating model")
@@ -114,7 +155,8 @@ def main():
         lr_scheduler_patience=config['lr_scheduler']['patience'],
         lr_scheduler_threshold=config['lr_scheduler']['threshold'],
         lr_scheduler_factor=config['lr_scheduler']['factor'],
-        lr_scheduler_mode=config['lr_scheduler']['mode']
+        lr_scheduler_mode=config['lr_scheduler']['mode'],
+        class_weights=class_weights
     )
     
     callbacks = []

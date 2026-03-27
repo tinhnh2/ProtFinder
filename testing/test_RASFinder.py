@@ -51,6 +51,7 @@ def create_data_loader(test_h5_paths, batch_size):
     return test_loader
 
 import numpy as np
+import pandas as pd
 def topk_accuracy(y_true, y_prob, k=3):
     topk = np.argsort(y_prob, axis=1)[:, -k:]
     return np.mean([y in topk[i] for i, y in enumerate(y_true)])
@@ -95,15 +96,27 @@ def test_RASFinder(
     trainer.test(model, dataloaders=test_loader)
     
     # Get collected predictions
-    all_labels, all_predictions, all_probs = prediction_collector.get_results()
+    all_labels, all_predictions, all_probs, all_keys = prediction_collector.get_results()
     
     # Calculate metrics
     accuracy = accuracy_score(all_labels, all_predictions)
     balanced_acc = balanced_accuracy_score(all_labels, all_predictions)
     print(f"Accuracy: {accuracy}") 
     # Class names
-    class_names = ['None', '+G', '+I', '+G+I']
+    class_names = ['None', '+I', '+G', '+G+I']
     
+    true_names = [class_names[x] for x in all_labels]
+    pred_names = [class_names[x] for x in all_predictions]
+
+    df = pd.DataFrame({
+        "alignment": all_keys,
+        "true_label": true_names,
+        "predicted_label": pred_names
+    })
+
+    df["correct"] = (df["true_label"] == df["predicted_label"])
+    df.to_csv("results_rasfinder.csv", index=False)
+    print("Saved results to results_rasfinder.csv")
     # Generate classification report
     report_str = classification_report(
         all_labels,
@@ -123,7 +136,8 @@ def test_RASFinder(
             f"Top-{top_k}: {[class_names[j] for j in topk]}"
         )
     # Confusion matrix
-    cm = confusion_matrix(all_labels, all_predictions)
+    cm = confusion_matrix(all_labels, all_predictions, normalize='true') * 100
+    cm = np.round(cm, 2)
     
     # Print results
     print("\nTest Results")
@@ -137,6 +151,7 @@ def test_RASFinder(
 
     cm_display.plot()
     plt.show()
+    plt.savefig("RASFinder_results.jpg",dpi=300)
 
 
 def main():
@@ -157,7 +172,7 @@ def main():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=128,
+        default=10,
         help="Batch size for testing"
     )
     parser.add_argument(

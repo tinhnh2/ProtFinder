@@ -67,7 +67,7 @@ class QFinderDataset(Dataset):
         # Extract label from key's first character, [0-6]
         label = int(key[0])
         
-        return feature, torch.tensor(label, dtype=torch.long)
+        return feature, torch.tensor(label, dtype=torch.long), key
     
 
     def __del__(self):
@@ -77,32 +77,6 @@ class QFinderDataset(Dataset):
                 h5_file.close()
             except Exception:
                 pass
-
-
-def map_label_to_multi(label):
-    """
-    Convert RHAS label to dual-head multi-label [has_G, has_I]
-    """
-
-    if isinstance(label, bytes):
-        label = label.decode()
-
-    label = str(label)
-
-    if label == "None":
-        return [0, 0]
-
-    elif label == "+G":
-        return [1, 0]
-
-    elif label == "+I":
-        return [0, 1]
-
-    elif label == "+G+I":
-        return [1, 1]
-
-    else:
-        raise ValueError(f"Unknown label: {label}")
 
 
 class RASFinderDataset(Dataset):
@@ -179,7 +153,7 @@ class RASFinderDataset(Dataset):
         # Extract label from key's first character, [0-3]
         label = int(key[0])
         
-        return sitewise_feature, summary_feature, torch.tensor(label, dtype=torch.long)
+        return sitewise_feature, summary_feature, torch.tensor(label, dtype=torch.long), key
     
     
     def __del__(self):
@@ -207,7 +181,7 @@ def collate_fn_rasfinder(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Ten
         - labels: Tensor of shape (B,)
     """
 
-    sitewise_features, summary_features, labels = zip(*batch)
+    sitewise_features, summary_features, labels, keys = zip(*batch)
     
     # Get actual lengths
     lengths = torch.tensor([f.shape[0] for f in sitewise_features], dtype=torch.long)
@@ -230,4 +204,4 @@ def collate_fn_rasfinder(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Ten
     summary_batch = torch.stack(summary_features)  # (B, 10)
     labels_batch = torch.stack(labels)            # (B,)
     
-    return sitewise_batch, summary_batch, lengths, labels_batch
+    return sitewise_batch, summary_batch, lengths, labels_batch, list(keys)

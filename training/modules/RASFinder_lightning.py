@@ -9,35 +9,59 @@ from models import RASFinderModel
 
 class RASFinderLightningModule(pl.LightningModule):
 
-    def __init__(self, **kwargs):
+    def __init__(
+		self,
+        input_dim: int,
+        summary_dim: int,
+        num_classes: int,
+        num_heads: int,
+        num_layers: int,
+        dim_model: int,
+        dim_feedforward: int,
+        learning_rate: float,
+        weight_decay: float,
+        lr_scheduler_patience: int,
+        lr_scheduler_threshold: float,
+        lr_scheduler_factor: float,
+        lr_scheduler_mode: str,
+        class_weights: torch.Tensor = None  # NEW: optional class weight tensor
+	):
         super().__init__()
-        self.save_hyperparameters()
-
+        if class_weights is not None:
+            self.save_hyperparameters(ignore=['class_weights'])
+        else:
+            self.save_hyperparameters()
         torch.set_float32_matmul_precision("high")
-
         self.model = RASFinderModel(
-            input_dim=kwargs["input_dim"],
-            summary_dim=kwargs["summary_dim"],
-            num_classes=kwargs["num_classes"],
-            num_heads=kwargs["num_heads"],
-            num_layers=kwargs["num_layers"],
-            dim_model=kwargs["dim_model"],
-            dim_feedforward=kwargs["dim_feedforward"],
+            input_dim=input_dim,
+            summary_dim=summary_dim,
+            num_classes=num_classes,
+            num_heads=num_heads,
+            num_layers=num_layers,
+            dim_model=dim_model,
+            dim_feedforward=dim_feedforward
         )
 
+        # Loss: weighted CrossEntropy if class_weights provided
+        if class_weights is not None:
+            print(f"[RASFinder] Using weighted CrossEntropyLoss: {class_weights.tolist()}")
+            self.register_buffer('class_weights', class_weights)
+            self.criterion = nn.CrossEntropyLoss(weight=self.class_weights)
+        else:
+            print("[RASFinder] Using uniform CrossEntropyLoss (no class weights)")
+            self.register_buffer('class_weights', torch.ones(num_classes))
+            self.criterion = nn.CrossEntropyLoss()
 
-        self.criterion = nn.CrossEntropyLoss()
-
-        self.train_accuracy = Accuracy(task="multiclass", num_classes=kwargs["num_classes"])
-        self.val_accuracy = Accuracy(task="multiclass", num_classes=kwargs["num_classes"])
-        self.test_accuracy = Accuracy(task="multiclass", num_classes=kwargs["num_classes"])
+        self.train_accuracy = Accuracy(task="multiclass", num_classes=num_classes)
+        self.val_accuracy = Accuracy(task="multiclass", num_classes=num_classes)
+        self.test_accuracy = Accuracy(task="multiclass", num_classes=num_classes)
 
     def forward(self, sitewise_feature, lengths, summary_feature):
         return self.model(sitewise_feature, lengths, summary_feature)
 
     def training_step(self, batch, batch_idx):
 
-        sitewise_features, summary_features, lengths, labels = batch
+        sitewise_features, summary_features, lengths, labels, keys = batch
 
         logits = self(sitewise_features, lengths, summary_features)
         loss = self.criterion(logits, labels)
@@ -55,7 +79,7 @@ class RASFinderLightningModule(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
 
-        sitewise_features, summary_features, lengths, labels = batch
+        sitewise_features, summary_features, lengths, labels, keys = batch
 
         logits = self(sitewise_features, lengths, summary_features)
         loss = self.criterion(logits, labels)
@@ -72,7 +96,7 @@ class RASFinderLightningModule(pl.LightningModule):
 
     def test_step(self, batch: tuple, batch_idx: int) -> torch.Tensor:
 
-        sitewise_features, summary_features, lengths, labels = batch
+        sitewise_features, summary_features, lengths, labels, keys = batch
 
         # Forward pass
         logits = self(sitewise_features, lengths, summary_features)
@@ -83,7 +107,12 @@ class RASFinderLightningModule(pl.LightningModule):
         values = {"test_loss": loss, "test_acc": self.test_accuracy}
         self.log_dict(values, on_step=False, on_epoch=True, logger=True)
 
-        return loss
+        return {
+            "loss":   loss,
+            "logits": logits.detach(),
+            "labels": labels.detach(),
+            "keys": keys
+        }
 
     def configure_optimizers(self):
 
@@ -98,7 +127,8 @@ class RASFinderLightningModule(pl.LightningModule):
             mode=self.hparams.lr_scheduler_mode,
             factor=self.hparams.lr_scheduler_factor,
             patience=self.hparams.lr_scheduler_patience,
-            threshold=self.hparams.lr_scheduler_threshold
+            threshold=self.hparams.lr_scheduler_threshold,
+            threshold_mode='abs'
         )
 
         return {
@@ -109,106 +139,3 @@ class RASFinderLightningModule(pl.LightningModule):
             }
         }
 
-"""
-import torch
-import pytorch_lightning as pl
-from torchmetrics.classification import MultilabelF1Score
-from models import RASFinderV2
-
-
-class RASFinderV2Lightning(pl.LightningModule):
-    def __init__(self, config):
-        super().__init__()
-
-        self.save_hyperparameters()
-
-        self.model = RASFinderV2(
-            input_dim=config["input_dim"],
-            summary_dim=config["summary_dim"],
-            dim_model=config["dim_model"],
-            num_heads=config["num_heads"],
-            num_layers=config["num_layers"],
-            dim_feedforward=config["dim_feedforward"]
-        )
-
-        self.loss_fn = torch.nn.BCEWithLogitsLoss()
-
-        self.val_metric = MultilabelF1Score(num_labels=2)
-        self.test_metric = MultilabelF1Score(num_labels=2)
-
-    # =============================
-    # forward
-    # =============================
-    def forward(self, site, summary):
-        return self.model(site, summary)
-
-    # =============================
-    # common step
-    # =============================
-    def step(self, batch):
-        site, summary, label = batch
-
-        logits = self(site, summary)
-
-        loss = self.loss_fn(logits, label.float())
-
-        return loss, logits, label
-
-    # =============================
-    # training
-    # =============================
-    def training_step(self, batch, batch_idx):
-        loss, _, _ = self.step(batch)
-
-        self.log("train_loss", loss, prog_bar=True)
-
-        return loss
-
-    # =============================
-    # validation
-    # =============================
-    def validation_step(self, batch, batch_idx):
-        loss, logits, label = self.step(batch)
-
-        probs = torch.sigmoid(logits)
-        preds = probs > 0.5
-
-        f1 = self.val_metric(preds.int(), label.int())
-
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_f1", f1, prog_bar=True)
-
-    # =============================
-    # 🔥 TEST STEP (tối ưu tốc độ)
-    # =============================
-    def test_step(self, batch, batch_idx):
-
-        with torch.no_grad():
-            site, summary, label = batch
-
-            logits = self(site, summary)
-
-            probs = torch.sigmoid(logits)
-
-            preds = probs > 0.5
-
-            loss = self.loss_fn(logits, label.float())
-
-            f1 = self.test_metric(preds.int(), label.int())
-
-            self.log("test_loss", loss, prog_bar=True)
-            self.log("test_f1", f1, prog_bar=True)
-
-        # return để trainer gom lại nếu cần
-        return {
-            "probs": probs.detach().cpu(),
-            "preds": preds.detach().cpu(),
-            "labels": label.detach().cpu()
-        }
-
-    # =============================
-    # optimizer
-    # =============================
-    def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=1e-4)
-"""

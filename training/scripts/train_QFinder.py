@@ -107,6 +107,9 @@ def main():
         action="store_true",
         help="Run a quick test (1 batch, 1 epoch)"
     )
+	parser.add_argument("--class_weights",
+        action="store_true",
+        help="Enable class weighting (use uniform loss)")
     
     args = parser.parse_args()
     
@@ -137,7 +140,7 @@ def main():
         lr_scheduler_threshold=config['lr_scheduler']['threshold'],
         lr_scheduler_factor=config['lr_scheduler']['factor'],
         lr_scheduler_mode=config['lr_scheduler']['mode'],
-	    #class_weights=class_weights
+	    class_weights=class_weights
     )
     
     callbacks = []

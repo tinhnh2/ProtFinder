@@ -87,7 +87,7 @@ class QFinderLightningModule(pl.LightningModule):
         Returns:
             Loss value
         """
-        features, labels = batch
+        features, labels, keys = batch
         
         # Forward pass
         logits = self(features)
@@ -103,7 +103,7 @@ class QFinderLightningModule(pl.LightningModule):
 
     def validation_step(self, batch: tuple, batch_idx: int) -> torch.Tensor:
 
-        features, labels = batch
+        features, labels, keys = batch
         
         # Forward pass
         logits = self(features)
@@ -119,7 +119,7 @@ class QFinderLightningModule(pl.LightningModule):
 
     def test_step(self, batch: tuple, batch_idx: int) -> torch.Tensor:
 
-        features, labels = batch
+        features, labels, keys = batch
         
         # Forward pass
         logits = self(features)
@@ -132,7 +132,8 @@ class QFinderLightningModule(pl.LightningModule):
         
         return {
         "logits": logits.detach(),
-        "labels": labels.detach()
+        "labels": labels.detach(),
+        "keys": keys
     }
     
 

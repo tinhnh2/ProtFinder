@@ -58,5 +58,5 @@ checkpoint:
 # Logging
 logging:
   logger: "tensorboard"
-  log_dir: "lightning_logs2"
+  log_dir: "lightning_logs_50"
   name: "QFinder"

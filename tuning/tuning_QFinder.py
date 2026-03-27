@@ -10,6 +10,8 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
+from collections import Counter
+import torch
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -119,6 +121,27 @@ def thaw_top_conv_blocks(model, n_blocks=1):
         for p in block.parameters():
             p.requires_grad = True
 
+def compute_class_weights(dataset, num_classes):
+    """
+    Compute balanced class weights from training dataset.
+    """
+    labels = []
+
+    for i in range(len(dataset)):
+        _, y = dataset[i]
+        labels.append(int(y))
+
+    counts = Counter(labels)
+    total = sum(counts.values())
+
+    weights = []
+    for c in range(num_classes):
+        wc = total / (num_classes * counts.get(c, 1))
+        weights.append(wc)
+
+    weights = torch.tensor(weights, dtype=torch.float32)
+    return weights
+
 # ------------------------------------------------------------
 # Main
 # ------------------------------------------------------------
@@ -126,25 +149,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--pretrained_ckpt", required=True)
+    parser.add_argument("--class_weights", action="store_true",
+                        help="Enable class weighting (use uniform loss)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     ckpt_dir = Path(cfg['logging']['log_dir']) / cfg['logging']['name'] / "checkpoints"
-
-    # =========================================================
-    # LOAD BASE MODEL (SIMULATION PRETRAINED)
-    # =========================================================
-    model = QFinderLightningModule.load_from_checkpoint(
-        args.pretrained_ckpt,
-        strict=False,
-        num_classes=cfg["model"]["num_classes"],
-        learning_rate=cfg["training"]["learning_rate_tuning"],
-        weight_decay=cfg["training"]["weight_decay"],
-        lr_scheduler_patience=cfg["lr_scheduler"]["patience"],
-        lr_scheduler_threshold=cfg["lr_scheduler"]["threshold"],
-        lr_scheduler_factor=cfg["lr_scheduler"]["factor"],
-        lr_scheduler_mode=cfg["lr_scheduler"]["mode"],
-    )
 
     # =========================================================
     # PHASE 1: JOINT TRAINING (SIM + REAL)
@@ -157,7 +167,28 @@ def main():
     val_loader = create_data_loaders(cfg, "val","joint", 64)
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples: {len(val_loader.dataset)}")
-
+    print("Computing class weights from training set")
+    class_weights = None
+    if args.class_weights:
+        class_weights = compute_class_weights(
+            train_loader.dataset,
+            cfg['model']['num_classes']
+        )
+	# =========================================================
+    # LOAD BASE MODEL (SIMULATION PRETRAINED)
+    # =========================================================
+    model = QFinderLightningModule.load_from_checkpoint(
+        args.pretrained_ckpt,
+        strict=False,
+        num_classes=cfg["model"]["num_classes"],
+        learning_rate=cfg["training"]["learning_rate_tuning"],
+        weight_decay=cfg["training"]["weight_decay"],
+        lr_scheduler_patience=cfg["lr_scheduler"]["patience"],
+        lr_scheduler_threshold=cfg["lr_scheduler"]["threshold"],
+        lr_scheduler_factor=cfg["lr_scheduler"]["factor"],
+        lr_scheduler_mode=cfg["lr_scheduler"]["mode"],
+        class_weights=class_weights
+    )
     joint_logger = TensorBoardLogger(
         save_dir=cfg["logging"]["log_dir"],
         name=cfg["logging"]["name"] + "_joint",
@@ -184,13 +215,6 @@ def main():
     joint_last_ckpt = joint_ckpt.last_model_path
     print(f"Joint-training done. Last checkpoint: {joint_last_ckpt}")
 
-    # =========================================================
-    # LOAD JOINT MODEL FOR FINETUNING
-    # =========================================================
-    model = QFinderLightningModule.load_from_checkpoint(
-        joint_last_ckpt,
-        strict=False,
-    )
 
     # =========================================================
     # PHASE 2: FINE TUNING (REAL ONLY – FREEZE → THAW)
@@ -203,62 +227,24 @@ def main():
     val_loader = create_data_loaders(cfg, "val","joint", 32)
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples: {len(val_loader.dataset)}")
-
+    if args.class_weights:
+        class_weights = compute_class_weights(
+            train_loader.dataset,
+            cfg['model']['num_classes']
+        )
+	# =========================================================
+    # LOAD JOINT MODEL FOR FINETUNING
+    # =========================================================
+    model = QFinderLightningModule.load_from_checkpoint(
+        joint_last_ckpt,
+        strict=False,
+        class_weights=class_weights
+    )
     finetune_logger = TensorBoardLogger(
         save_dir=cfg["logging"]["log_dir"],
         name=cfg["logging"]["name"] + "_finetune",
     )
 
-    """
-    # -------------------------
-    # Stage 2.1: Freeze conv
-    # -------------------------
-    print("→ Freeze all conv blocks")
-    freeze_all_conv(model)
-
-    freeze_ckpt = ModelCheckpoint(
-        dirpath=ckpt_dir,
-        filename="finetune_freeze-{epoch}-{val_acc:.4f}",
-        monitor="val_acc",
-        mode="max",
-        save_top_k=1,
-        save_last=True,
-    )
-
-    trainer = pl.Trainer(
-        accelerator=cfg["trainer"]["accelerator"],
-        devices=cfg["trainer"]["devices"],
-        precision=cfg["trainer"]["precision"],
-        max_epochs=5,
-        logger=finetune_logger,
-        callbacks=[freeze_ckpt],
-    )
-    trainer.fit(model, train_loader, val_loader)
-
-    # -------------------------
-    # Stage 2.2: Thaw top conv
-    # -------------------------
-    print("→ Thaw top conv block")
-    thaw_top_conv_blocks(model, n_blocks=1)
-
-    thaw_ckpt = ModelCheckpoint(
-        dirpath=ckpt_dir,
-        filename="finetune_thaw-{epoch}-{val_acc:.4f}",
-        monitor="val_acc",
-        mode="max",
-        save_top_k=1,
-        save_last=True,
-    )
-
-    trainer = pl.Trainer(
-        accelerator=cfg["trainer"]["accelerator"],
-        devices=cfg["trainer"]["devices"],
-        precision=cfg["trainer"]["precision"],
-        max_epochs=10,
-        logger=finetune_logger,
-        callbacks=[thaw_ckpt],
-    )
-    """
     # ---------- Stage 2.1: Freeze backbone ----------
     print("→ Stage 2.1: Freeze backbone")
     freeze_backbone(model)

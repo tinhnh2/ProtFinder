@@ -139,8 +139,15 @@ Training logs are automatically generated in `lightning_logs/`, which can be vie
 # View training logs for QFinder
 tensorboard --logdir lightning_logs/QFinder
 ```
+#### Step 6: Fine-Tuning Models
+```bash
+python tuning/tuning_QFinder.py --config configs/QFinder_config.yaml --pretrained_ckpt lightning_logs/QFinder/checkpoints/last.ckpt
 
-### Step 6: Test Models
+python tuning/tuning_RASFinder.py --config configs/RASFinder_config.yaml --pretrained_ckpt lightning_logs/RASFinder/checkpoints/last.ckpt
+
+python tuning/tuning_FFinder.py --config configs/FFinder_config.yaml
+```
+### Step 7: Test Models
 
 After training, the best model checkpoint path will be printed. Use that path for testing.
 
@@ -157,7 +164,7 @@ python testing/test_RASFinder.py \
 
 # Test FFinder
 python testing/test_FFinder.py \
-    --model_path models/FFinder/FFinder_model.joblib \
+    --model_path models/FFinder/FFinder_last.joblib \
     --h5_paths ./hdf5_features/FFinder_feature_test.h5
 ```
 
@@ -199,10 +206,15 @@ model-selection-via-ML/
 │   ├── QFinder_config.yaml
 │   ├── RASFinder_config.yaml
 │   └── FFinder_config.yaml
+├── tuning/                   # Fine-tuning files
+│   ├── tuning_QFinder.py
+│   ├── tuning_RASFinder.py
+│   └── tuning_FFinder.py
 │
 ├── empirical_parameters/      # Input CSV files for Step 1
 ├── fitted_empirical_dist/     # Output .npz files from Step 1
-├── real_alignments_15330/     # 15330 real MSA data
+├── real_alignments_15330/     # 15330 real MSA data, need extracted from zip files
+├── hssp1471				   # 1471 real HSSP MSA data, need extracted from zip files
 ├── pyproject.toml             # Project configuration
 └── README.md
 ```
@@ -239,4 +251,3 @@ Parameter files in `empirical_parameters/` contain model parameters from the Evo
 ## Requirements
 
 See `pyproject.toml` for dependencies. In addition, IQ-TREE is needed for simulation.
-

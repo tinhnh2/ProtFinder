@@ -400,7 +400,7 @@ def extract_rasfinder_features(msa):
     # Calculate statistics from valid site frequencies
     entropies = entropy(site_frequencies.T)
     unique_aa_props = (site_frequencies > 0).sum(axis=1) / 20.0
-    invariant_indicator = (unique_aa_props == 0.05)
+    invariant_indicator = (unique_aa_props < 1.5/20)
     
     sitewise_features = np.column_stack([site_frequencies, entropies, unique_aa_props, invariant_indicator]).astype(np.float32)
     summary_features = extract_entropy_features(entropies, gap_ratio_site)
@@ -596,12 +596,13 @@ def extract_ffinder_features(msa, file_path):
     - 20 amino acid frequencies
     - Number of taxa
     - Number of sites
+    - KL divergence, JS divergence and relateive differences
     
     Args:
         msa: MSA (with gaps)
     
     Returns:
-        22-element array of FFinder features
+        50-element array of FFinder features
     """
     n_taxa, n_sites = msa.shape
     overall_freqs = calculate_overall_frequencies(msa)
@@ -670,7 +671,7 @@ def extract_labels(filename):
             - label_ras: RHAS model label (0-3)
             - label_f: +F label (0-1)
     """
-    label_ras = int("+I" in filename) + 2 * int("+G4" in filename)
+    label_ras = int("+I" in filename) + 2 * int("+G" in filename)
     label_f = int("+F" in filename)
     return label_ras, label_f
 
