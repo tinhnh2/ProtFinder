@@ -30,7 +30,7 @@ def compute_class_weights(dataset, num_classes):
     labels = []
 
     for i in range(len(dataset)):
-        _, y = dataset[i]
+        _, y, key = dataset[i]
         labels.append(int(y))
 
     counts = Counter(labels)

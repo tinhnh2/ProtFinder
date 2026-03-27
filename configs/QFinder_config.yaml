@@ -41,6 +41,7 @@ trainer:
   precision: "16-mixed"  # Mixed precision training
   gradient_clip_val: null  # Gradient clipping
   max_epochs: 100
+  max_epochs_joint: 50
   max_epochs_tuning: 50
   check_val_every_n_epoch: 1  # Run validation loop every N training epochs
   log_every_n_steps: 50  # Log metrics every N steps
@@ -58,5 +59,5 @@ checkpoint:
 # Logging
 logging:
   logger: "tensorboard"
-  log_dir: "lightning_logs_50"
+  log_dir: "lightning_logs"
   name: "QFinder"

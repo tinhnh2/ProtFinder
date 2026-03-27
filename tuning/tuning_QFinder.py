@@ -200,7 +200,7 @@ def main():
         accelerator=cfg["trainer"]["accelerator"],
         devices=cfg["trainer"]["devices"],
         precision=cfg["trainer"]["precision"],
-        max_epochs=20,
+        max_epochs=cfg["trainer"]["max_epochs_joint"],
         logger=joint_logger,
         callbacks=[joint_ckpt],
         log_every_n_steps=20,
@@ -256,7 +256,7 @@ def main():
         accelerator=cfg["trainer"]["accelerator"],
         devices=cfg["trainer"]["devices"],
         precision=cfg["trainer"]["precision"],
-        max_epochs=10,
+        max_epochs=cfg["trainer"]["max_epochs_tuning"],
         logger=finetune_logger,
         callbacks=[freeze_ckpt],
     )
