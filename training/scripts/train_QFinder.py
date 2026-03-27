@@ -107,9 +107,6 @@ def main():
         action="store_true",
         help="Run a quick test (1 batch, 1 epoch)"
     )
-	parser.add_argument("--class_weights",
-        action="store_true",
-        help="Enable class weighting (use uniform loss)")
     
     args = parser.parse_args()
     
