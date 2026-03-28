@@ -156,7 +156,7 @@ def main():
         help="Path to trained model (joblib file)"
     )
     parser.add_argument(
-        "--h5_test_paths",
+        "--test_h5_paths",
         type=str,
         nargs="+",
         default=["./hdf5_features/FFinder_feature_test.h5"],
