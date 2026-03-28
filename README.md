@@ -164,8 +164,8 @@ python testing/test_RASFinder.py \
 
 # Test FFinder
 python testing/test_FFinder.py \
-    --model_path models/FFinder/FFinder_last.joblib \
-    --h5_paths ./hdf5_features/FFinder_feature_test.h5
+    --checkpoint models/FFinder/FFinder_last.joblib \
+    --test_h5_paths ./hdf5_features/FFinder_feature_test.h5
 ```
 
 Some metrices will be printed.
@@ -206,6 +206,7 @@ model-selection-via-ML/
 │   ├── QFinder_config.yaml
 │   ├── RASFinder_config.yaml
 │   └── FFinder_config.yaml
+|
 ├── tuning/                   # Fine-tuning files
 │   ├── tuning_QFinder.py
 │   ├── tuning_RASFinder.py
