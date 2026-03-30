@@ -1,6 +1,23 @@
 # Phylogenetic Model Selection via Machine Learning
 
-This project implements machine learning models for phylogenetic model selection.
+Model selection is a fundamental step in phylogenetic analysis, which determines the
+best-fit model of sequence evolution for a given multiple sequence alignment. Popular
+model selection methods, such as ModelFinder, rely on statistical information criteria
+like the Bayesian Information Criterion (BIC) or the Akaike Information Criterion
+(AIC). However, these approaches are computationally intensive and the validity of using
+information criteria remains a concern. Recently, machine learning has gradually been
+applied to phylogenetics. ModelDetector is currently the only machine learning approach
+for protein model selection. However, ModelDetector has several limitations regarding its
+generalization to real data and lack of support for rate heterogeneity models. To overcome
+these limitations, we developed ProtFinder, an efficient machine learning framework for
+protein model selection. Beyond selecting the best-fit substitution model, ProtFinder also
+predicts the rate heterogeneity model and determines whether to use pre-estimated amino
+acid frequencies. To enhance ProtFinders generalization to real datasets, we employed a
+transfer learning strategy: ProtFinder was first trained on a large simulated dataset, then
+we performed joint-training on combination of simulation and real data, finally, fine-tuning
+just on real data. Experimental results show that ProtFinder is up to 5000-times faster
+than ModelFinder while delivering results comparable to IQ-TREE and outperforming
+ModelDetector.
 
 ## Project Overview
 
@@ -154,13 +171,15 @@ After training, the best model checkpoint path will be printed. Use that path fo
 ```bash
 # Test QFinder
 python testing/test_QFinder.py \
-    --checkpoint lightning_logs/QFinder/checkpoints/QFinder-epoch=XX-val_acc=X.XXXX.ckpt \
-    --test_h5_paths ./hdf5_features/QFinder_feature_test.h5
+    --checkpoint lightning_logs/QFinder/checkpoints/last.ckpt \
+    --test_h5_paths ./hdf5_features/QFinder_feature_test.h5 \
+    --top_k 3
 
 # Test RASFinder
 python testing/test_RASFinder.py \
-    --checkpoint lightning_logs/RASFinder/checkpoints/RASFinder-epoch=XX-val_acc=X.XXXX.ckpt \
-    --test_h5_paths ./hdf5_features/RASFinder_feature_test.h5
+    --checkpoint lightning_logs/RASFinder/checkpoints/last.ckpt \
+    --test_h5_paths ./hdf5_features/RASFinder_feature_test.h5 \
+    --top_k 3
 
 # Test FFinder
 python testing/test_FFinder.py \
@@ -214,8 +233,8 @@ model-selection-via-ML/
 │
 ├── empirical_parameters/      # Input CSV files for Step 1
 ├── fitted_empirical_dist/     # Output .npz files from Step 1
-├── real_alignments_15330/     # 15330 real MSA data, need extracted from zip files
-├── hssp1471				   # 1471 real HSSP MSA data, need extracted from zip files
+├── real_alignments_15330/     # 15330 real MSA data, extracted from zip files
+├── hssp1471				   # 1471 real HSSP MSA data, extracted from zip files
 ├── pyproject.toml             # Project configuration
 └── README.md
 ```
