@@ -265,7 +265,7 @@ Parameter files in `empirical_parameters/` contain model parameters from the Evo
 ### FFinder
 - **Task**: 2-class +F model classification
 - **Classes**: -F, +F
-- **Architecture**: Balanced Random Forest Classifier
+- **Architecture**: XGBoost Classifier
 - **Input**: FFinder feature
 
 ## Requirements
