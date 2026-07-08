@@ -163,7 +163,7 @@ def generate_alignment(
             node.dist = sample_from_inverse(cdf_dict, key, 0, 1, 10)
     
     # Step 3: Assemble model string
-    file_name = f"{MODEL_MAP[model_name]}({n_taxa}){model_name}"
+    file_name = f"{MODEL_MAP[model_name]}_{n_taxa}_{model_name}"
     command = f"-m {model_name}"
     
     if F:
@@ -179,15 +179,15 @@ def generate_alignment(
         key = 'I'
         invariant = sample_from_inverse(cdf_dict, key, 0, 0.9, 5)
         command += f'+I{{{invariant}}}'
-        file_name += f'+I{{{invariant}}}'
+        file_name += f'+I_{invariant}_'
     
     if G4:
         key = 'G4'
         alpha = sample_from_inverse(cdf_dict, key, 0.001, 10, 5)
         command += f'+G4{{{alpha}}}'
-        file_name += f'+G4{{{alpha}}}'
+        file_name += f'+G4_{alpha}_'
     
-    file_name += f'[{n_sites}]_{iteration}'
+    file_name += f'_{n_sites}_{iteration}'
     
     # Step 4: Save modified tree
     tree_out = trees_dir / f"{file_name}.treefile"
