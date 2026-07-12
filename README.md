@@ -1,6 +1,6 @@
 # Phylogenetic Model Selection via Machine Learning
 
-Model selection is a fundamental step in phylogenetic analysis, which determines the
+Model selection is a fundamental step in phylogenetic analysis that determines the
 best-fit model of sequence evolution for a given multiple sequence alignment. Popular
 model selection methods, such as ModelFinder, rely on statistical information criteria
 like the Bayesian Information Criterion (BIC) or the Akaike Information Criterion
@@ -12,12 +12,11 @@ generalization to real data and lack of support for rate heterogeneity models. T
 these limitations, we developed ProtFinder, an efficient machine learning framework for
 protein model selection. Beyond selecting the best-fit substitution model, ProtFinder also
 predicts the rate heterogeneity model and determines whether to use pre-estimated amino
-acid frequencies. To enhance ProtFinders generalization to real datasets, we employed a
-transfer learning strategy: ProtFinder was first trained on a large simulated dataset, then
-we performed joint-training on combination of simulation and real data, finally, fine-tuning
-just on real data. Experimental results show that ProtFinder is up to 5000-times faster
-than ModelFinder while delivering results comparable to IQ-TREE and outperforming
-ModelDetector.
+acid frequencies. To enhance ProtFinder’s generalization to real datasets, we employed a
+transfer learning strategy: initial training on large-scale simulated data, followed by joint
+training on both simulated and empirical data, and final fine-tuning using real data only.
+Experimental results show that ProtFinder is up to 2,200x faster than ModelFinder while
+achieving accuracy comparable to IQ-TREE and outperforming ModelDetector
 
 ## Project Overview
 
