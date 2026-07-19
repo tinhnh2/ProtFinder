@@ -228,7 +228,12 @@ def tuning_FFinder(config, retuning = False):
     # -----------------------------
     # XGBoost (model-aware)
     # -----------------------------
-    print("Training with joint simulation + real data")
+    print("Training with real data")
+    X_train, y_train = load_data_from_hdf5(tuning_h5_paths, "train")
+    print(f"Training samples: {X_train.shape[0]}, Features: {X_train.shape[1]}")
+
+    X_val, y_val = load_data_from_hdf5(tuning_h5_paths, "val")
+    print(f"Validation samples: {X_val.shape[0]}, Features: {X_val.shape[1]}")
     base_clf = XGBClassifier(
         n_estimators=config['training']['n_estimators'],
         max_depth=config['training']['max_depth'],
@@ -262,7 +267,7 @@ def tuning_FFinder(config, retuning = False):
         )
 
         print("Fitting grid search on training data")
-        grid_search.fit(X_train, y_train, xgb_model=pretrained.get_booster())
+        grid_search.fit(X_train, y_train, xgb_model=joint_pretrained.get_booster())
 
         print("\nGrid Search Results")
         print(f"Best parameters: {grid_search.best_params_}")
@@ -290,7 +295,7 @@ def tuning_FFinder(config, retuning = False):
         # Train model
         print("Fitting model on training data")
         clf = base_clf
-        clf.fit(X_train, y_train, xgb_model=pretrained.get_booster())
+        clf.fit(X_train, y_train, xgb_model=joint_pretrained.get_booster())
 
         # Evaluate on validation set
         print("\nValidation Set Performance")
