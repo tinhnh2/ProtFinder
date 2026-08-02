@@ -1,22 +1,6 @@
 # Phylogenetic Model Selection via Machine Learning
 
-Model selection is a fundamental step in phylogenetic analysis that determines the
-best-fit model of sequence evolution for a given multiple sequence alignment. Popular
-model selection methods, such as ModelFinder, rely on statistical information criteria
-like the Bayesian Information Criterion (BIC) or the Akaike Information Criterion
-(AIC). However, these approaches are computationally intensive and the validity of using
-information criteria remains a concern. Recently, machine learning has gradually been
-applied to phylogenetics. ModelDetector is currently the only machine learning approach
-for protein model selection. However, ModelDetector has several limitations regarding its
-generalization to real data and lack of support for rate heterogeneity models. To overcome
-these limitations, we developed ProtFinder, an efficient machine learning framework for
-protein model selection. Beyond selecting the best-fit substitution model, ProtFinder also
-predicts the rate heterogeneity model and determines whether to use pre-estimated amino
-acid frequencies. To enhance ProtFinder’s generalization to real datasets, we employed a
-transfer learning strategy: initial training on large-scale simulated data, followed by joint
-training on both simulated and empirical data, and final fine-tuning using real data only.
-Experimental results show that ProtFinder is up to 2,200x faster than ModelFinder while
-achieving accuracy comparable to IQ-TREE and outperforming ModelDetector
+Model selection is a fundamental step in phylogenetic analysis that determines the best-fit model of sequence evolution for a given multiple sequence alignment. Popular model selection methods, such as ModelFinder, rely on statistical information criteria, such as the Bayesian Information Criterion (BIC) or the Akaike Information Criterion (AIC).However, these approaches are computationally expensive and the use of information criteria has been the subject of ongoing discussion. Recently, machine learning has emerged as a promising approach for phylogenetic model selection in both nucleotide and protein sequence analyses. ModelDetector is currently the only machine learning-based method for amino acid substitution model selection. However, because ModelDetector was trained on simulated data, it does not perform well on real datasets. Another limitation is that it does not support different rate heterogeneity across sites (RHAS) models. To overcome these limitations, we introduce ProtFinder, an efficient machine learning framework for protein model selection that predicts amino acid substitution models, RHAS models, and amino acid frequency models. To enable ProtFinder to work with real datasets, we employed a transfer learning strategy consisting of three stages: (1) initial training on large-scale simulated data, (2) joint training on both simulated and real data, and (3) final fine-tuning using real data only. Experimental results show that ProtFinder outperformed ModelDetector in amino acid substitution model selection. ProtFinder achieved comparable accuracy to the maximum likelihood method ModelFinder for substitution model selection on medium and large MSAs. It performs slightly better than ModelFinder in RHAS model selection and substantially outperforms it in amino acid frequency model determination. Notably, ProtFinder is up to 1,400 times faster than ModelFinder in terms of inference time, making it particularly suitable for medium and large datasets.
 
 ## Project Overview
 
@@ -26,7 +10,9 @@ The project consists of 5 main steps:
 2. **Data Simulation** - Generate simulated MSAs using IQ-TREE Ali-Sim
 3. **Feature Extraction** - Extract features from simulated MSAs
 4. **Feature Packaging** - Package features into HDF5 format
-5. **Model Training and Testing** - Train and evaluate machine learning models
+5. **Model Training** - Train and evaluate machine learning models
+6. **Fine-Tuning Models** - Fine tune models
+7. **Model Testing** - Test the models
 
 
 ## Workflow
@@ -259,7 +245,7 @@ Parameter files in `empirical_parameters/` contain model parameters from the Evo
 - **Task**: 4-class RHAS model classification
 - **Classes**: None, +G, +I, +G+I
 - **Architecture**: Transformer encoder-based network
-- **Input**: RASFinder features
+- **Input**: RHASFinder features
 
 ### FFinder
 - **Task**: 2-class +F model classification
