@@ -2,10 +2,10 @@
 Data processing modules for phylogenetic model selection.
 """
 
-from .datasets import QFinderDataset, RASFinderDataset, collate_fn_rasfinder
+from .datasets import QFinderDataset, RHASFinderDataset, collate_fn_rhasfinder
 
 __all__ = [
     'QFinderDataset',
-    'RASFinderDataset',
-    'collate_fn_rasfinder',
+    'RHASFinderDataset',
+    'collate_fn_rhasfinder',
 ]
