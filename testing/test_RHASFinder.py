@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Testing script for RASFinder model.
+Testing script for RHASFinder model.
 
-Evaluates a trained RASFinder model on test data and generates detailed metrics.
+Evaluates a trained RHASFinder model on test data and generates detailed metrics.
 
 Usage:
-    python testing/test_RASFinder.py --checkpoint path/to/checkpoint.ckpt --test_h5_paths path/to/test.h5
+    python testing/test_RHASFinder.py --pretrained_model path/to/checkpoint.ckpt --test_paths path/to/test.h5
 """
 
 import argparse
@@ -151,23 +151,23 @@ def test_RASFinder(
 
     cm_display.plot()
     plt.show()
-    plt.savefig("RASFinder_results.jpg",dpi=300)
+    plt.savefig("RHASFinder_results.jpg",dpi=300)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Test RASFinder model")
+    parser = argparse.ArgumentParser(description="Test RHASFinder model")
     parser.add_argument(
-        "--checkpoint",
+        "--pretrained_model",
         type=str,
         required=True,
-        help="Path to model checkpoint"
+        help="Path to pretrained_model"
     )
     parser.add_argument(
-        "--test_h5_paths",
+        "--test_paths",
         type=str,
         nargs="+",
-        default=["./hdf5_features/RASFinder_feature_test.h5"],
-        help="Paths to test HDF5 files (default: ./hdf5_features/RASFinder_feature_test.h5)"
+        default=["./hdf5_features/RHASFinder_feature_test.h5"],
+        help="Paths to test HDF5 files (default: ./hdf5_features/RHASFinder_feature_test.h5)"
     )
     parser.add_argument(
         "--batch_size",
@@ -187,8 +187,8 @@ def main():
     import time
     start_total = time.perf_counter()
     test_RASFinder(
-        checkpoint_path=args.checkpoint,
-        test_h5_paths=args.test_h5_paths,
+        checkpoint_path=args.pretrained_model,
+        test_h5_paths=args.test_paths,
         batch_size=args.batch_size,
         top_k=args.top_k
     )

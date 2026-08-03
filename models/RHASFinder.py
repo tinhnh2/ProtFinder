@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 
-class RASFinderModel(nn.Module):
+class RHASFinderModel(nn.Module):
 
     def __init__(
         self,

@@ -34,20 +34,11 @@ def load_config(config_path):
         return yaml.safe_load(f)
 
 def make_collate_fn(max_seq_len=None):
-    """
-    Tạo collate_fn có hỗ trợ truncation sequence.
- 
-    Real MSA thường có số sites lớn hơn nhiều so với simulated MSA.
-    Khi pad toàn bộ sequence trong batch lên cùng độ dài,
-    tensor (B, max_n_sites, 23) sẽ bùng nổ bộ nhớ.
- 
-    max_seq_len: Nếu được đặt, truncate tất cả sequence xuống tối đa max_seq_len sites.
-    """
     from typing import List, Tuple
     def collate_fn(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
         sitewise_features, summary_features, labels, keys = zip(*batch)
  
-        # Truncate nếu cần
+        # Truncate
         if max_seq_len is not None:
             sitewise_features = [
                 f[:max_seq_len] if f.shape[0] > max_seq_len else f
@@ -103,27 +94,7 @@ def collect_labels(dataloader) -> np.ndarray:
         labels = batch[3]
         all_labels.append(labels.numpy())
     return np.concatenate(all_labels)
-
-
-"""
-def compute_class_weights(dataset, num_classes):
-    labels = []
-
-    for i in range(len(dataset)):
-        _, y = dataset[i]
-        labels.append(int(y))
-
-    counts = Counter(labels)
-    total = sum(counts.values())
-
-    weights = []
-    for c in range(num_classes):
-        wc = total / (num_classes * counts.get(c, 1))
-        weights.append(wc)
-
-    weights = torch.tensor(weights, dtype=torch.float32)
-    return weights
-"""
+    
 
 def create_dataloader(config, group_name, data_type):
     h5_paths = config["data"]["joint_h5_paths"]
@@ -315,7 +286,7 @@ def main():
     # --------------------------------------------------------
     # Fine-tune
     # --------------------------------------------------------
-    print("Starting RASFinder joint training..")
+    print("Starting RHASFinder joint training..")
     trainer.fit(
         model,
         train_dataloaders=train_loader,
@@ -329,7 +300,7 @@ def main():
     # --------------------------------------------------------
     # Data
     # --------------------------------------------------------
-    print("Loading real RASFinder dataset for tuning...")
+    print("Loading real RHASFinder dataset for tuning...")
     train_loader = create_dataloader(config, "train","tuning")
     val_loader = create_dataloader(config, "val", "tuning")
 

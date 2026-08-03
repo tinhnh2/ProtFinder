@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 """
+# The inverse-CDF fitting and sampling logic in EmpiricalInverseCDF
+# is adapted from astroML.density_estimation.EmpiricalDistribution:
+# https://github.com/astroML/astroML/blob/c85c2aac277b3fd8eb260cb72a9916a91086a87e/astroML/density_estimation/empirical.py
+#
+# Copyright (c) 2012-2013, Jacob Vanderplas
+# Licensed under the BSD-2-Clause License.
+# See LICENSES/astroML-BSD-2-Clause.txt.
+
+# Modifications: renamed the class and added CSV processing and
+# NumPy .npz serialization/deserialization.
 Fit empirical inverse CDF distributions from real MSA parameter distributions.
 
 This script reads CSV files containing parameters extracted from real MSAs,

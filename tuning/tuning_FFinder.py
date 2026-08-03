@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
-Testing script for FFinder model.
-
-Evaluates a trained FFinder model on test data and generates detailed metrics.
-
-Usage:
-    python testing/test_FFinder.py --model_path models/FFinder/FFinder_model.joblib --h5_paths path/to/test.h5
+Tuning script for FFinder model.
 """
 
 import argparse
@@ -14,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import h5py
 import joblib
-from imblearn.ensemble import BalancedRandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score
@@ -63,7 +57,7 @@ def load_data_from_hdf5(h5_paths, group_name):
 
 def tuning_FFinder(config, retuning = False):
     """
-    Train FFinder model using Balanced Random Forest Classifier.
+    Train FFinder model using XGBoost Classifier.
 
     Args:
         config: Configuration dictionary
@@ -72,8 +66,8 @@ def tuning_FFinder(config, retuning = False):
 
     # Load train/val data from the same HDF5 file (different groups)
     print("Loading training and validation data")
-    train_val_h5_paths = config['data']['ffinder_joint_h5_paths']
-    tuning_h5_paths = config['data']['ffinder_tuning_h5_paths']
+    train_val_h5_paths = config['data']['joint_h5_paths']
+    tuning_h5_paths = config['data']['tuning_h5_paths']
     if not train_val_h5_paths or not tuning_h5_paths:
         raise ValueError("No train/val HDF5 paths specified in config")
 
@@ -95,19 +89,6 @@ def tuning_FFinder(config, retuning = False):
     load_path = load_dir / config['model_saving']['filename']
     load_joint_path = load_dir / config['model_saving']['joint_filename']
     pretrained = joblib.load(load_path)
-    # ------------------------------------
-    # CV + scorer
-    # ------------------------------------
-    # cv = StratifiedKFold(
-    #     n_splits=5,
-    #     shuffle=True,
-    #     random_state=42
-    # )
-    #
-    # scorer = make_scorer(
-    #     roc_auc_score,
-    #     needs_proba=True
-    # )
     # -----------------------------
     # XGBoost (model-aware)
     # -----------------------------
@@ -124,14 +105,7 @@ def tuning_FFinder(config, retuning = False):
         tree_method="hist",
         scale_pos_weight=scale_pos_weight
     )
-    """
-    base_clf = BalancedRandomForestClassifier(
-        n_estimators=config['training']['n_estimators'],
-        max_depth=config['training']['max_depth'],
-        random_state=config['training']['random_state'],
-        n_jobs=config['training']['n_jobs']
-    )
-    """
+
     # Grid search or direct training
     grid_search = None
     if config['training']['grid_search']['enabled']:
@@ -212,28 +186,16 @@ def tuning_FFinder(config, retuning = False):
             print("(Trained with fixed hyperparameters from config)")
 
     joint_pretrained = joblib.load(load_joint_path)
-    # ------------------------------------
-    # CV + scorer
-    # ------------------------------------
-    # cv = StratifiedKFold(
-    #     n_splits=5,
-    #     shuffle=True,
-    #     random_state=42
-    # )
-    #
-    # scorer = make_scorer(
-    #     roc_auc_score,
-    #     needs_proba=True
-    # )
-    # -----------------------------
-    # XGBoost (model-aware)
-    # -----------------------------
     print("Training with real data")
     X_train, y_train = load_data_from_hdf5(tuning_h5_paths, "train")
     print(f"Training samples: {X_train.shape[0]}, Features: {X_train.shape[1]}")
 
     X_val, y_val = load_data_from_hdf5(tuning_h5_paths, "val")
     print(f"Validation samples: {X_val.shape[0]}, Features: {X_val.shape[1]}")
+    n_pos = np.sum(y_train == 1)
+    n_neg = np.sum(y_train == 0)
+
+    scale_pos_weight = n_neg / n_pos
     base_clf = XGBClassifier(
         n_estimators=config['training']['n_estimators'],
         max_depth=config['training']['max_depth'],

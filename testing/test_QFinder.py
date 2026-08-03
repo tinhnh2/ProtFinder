@@ -5,7 +5,7 @@ Testing script for QFinder model.
 Evaluates a trained QFinder model on test data and generates detailed metrics.
 
 Usage:
-    python testing/test_QFinder.py --checkpoint path/to/checkpoint.ckpt --test_h5_paths path/to/test.h5
+    python testing/test_QFinder.py --pretrained_model path/to/checkpoint.ckpt --test_paths path/to/test.h5
 """
 
 import argparse
@@ -123,15 +123,6 @@ def test_QFinder(
         target_names=class_names,
         zero_division=0
     ))
-    """
-    # Generate classification report
-    report_str = classification_report(
-        all_labels,
-        all_predictions,
-        target_names=class_names,
-        digits=4
-    )
-    """
     for k in [1, 2, 3]:
         print(f"Top-{k} accuracy: {topk_accuracy(all_labels, y_probs, k):.4f}")
 
@@ -167,13 +158,13 @@ def test_QFinder(
 def main():
     parser = argparse.ArgumentParser(description="Test QFinder model")
     parser.add_argument(
-        "--checkpoint",
+        "--pretrained_model",
         type=str,
         required=True,
-        help="Path to model checkpoint"
+        help="Path to pretrained_model"
     )
     parser.add_argument(
-        "--test_h5_paths",
+        "--test_paths",
         type=str,
         nargs="+",
         default=["./hdf5_features/QFinder_feature_test.h5"],
@@ -197,8 +188,8 @@ def main():
     import time
     start_total = time.perf_counter()
     test_QFinder(
-        checkpoint_path=args.checkpoint,
-        test_h5_paths=args.test_h5_paths,
+        checkpoint_path=args.pretrained_model,
+        test_h5_paths=args.test_paths,
         batch_size=args.batch_size,
         top_k=args.top_k
     )

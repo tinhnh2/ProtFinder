@@ -4,10 +4,10 @@ import pytorch_lightning as pl
 from torchmetrics import Accuracy
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from models import RASFinderModel
+from models import RHASFinderModel
 
 
-class RASFinderLightningModule(pl.LightningModule):
+class RHASFinderLightningModule(pl.LightningModule):
 
     def __init__(
 		self,
@@ -32,7 +32,7 @@ class RASFinderLightningModule(pl.LightningModule):
         else:
             self.save_hyperparameters()
         torch.set_float32_matmul_precision("high")
-        self.model = RASFinderModel(
+        self.model = RHASFinderModel(
             input_dim=input_dim,
             summary_dim=summary_dim,
             num_classes=num_classes,
@@ -44,11 +44,11 @@ class RASFinderLightningModule(pl.LightningModule):
 
         # Loss: weighted CrossEntropy if class_weights provided
         if class_weights is not None:
-            print(f"[RASFinder] Using weighted CrossEntropyLoss: {class_weights.tolist()}")
+            print(f"[RHASFinder] Using weighted CrossEntropyLoss: {class_weights.tolist()}")
             self.register_buffer('class_weights', class_weights)
             self.criterion = nn.CrossEntropyLoss(weight=self.class_weights)
         else:
-            print("[RASFinder] Using uniform CrossEntropyLoss (no class weights)")
+            print("[RHASFinder] Using uniform CrossEntropyLoss (no class weights)")
             self.register_buffer('class_weights', torch.ones(num_classes))
             self.criterion = nn.CrossEntropyLoss()
 

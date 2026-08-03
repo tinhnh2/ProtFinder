@@ -5,7 +5,7 @@ Testing script for FFinder model.
 Evaluates a trained FFinder model on test data and generates detailed metrics.
 
 Usage:
-    python testing/test_FFinder.py --model_path models/FFinder/FFinder_model.joblib --h5_paths path/to/test.h5
+    python testing/test_FFinder.py --pretrained_model models/FFinder/FFinder_model.joblib --test_paths path/to/test.h5
 """
 
 import argparse
@@ -150,13 +150,13 @@ def test_FFinder(model_path: str, h5_paths: list):
 def main():
     parser = argparse.ArgumentParser(description="Test FFinder model")
     parser.add_argument(
-        "--checkpoint",
+        "--pretrained_model",
         type=str,
         required=True,
         help="Path to trained model (joblib file)"
     )
     parser.add_argument(
-        "--test_h5_paths",
+        "--test_paths",
         type=str,
         nargs="+",
         default=["./hdf5_features/FFinder_feature_test.h5"],
@@ -168,8 +168,8 @@ def main():
     import time
     start_total = time.perf_counter()
     test_FFinder(
-        model_path=args.checkpoint,
-        h5_paths=args.h5_test_paths
+        model_path=args.pretrained_model,
+        h5_paths=args.test_paths
     )
     end_total = time.perf_counter()
     total_time = end_total - start_total

@@ -212,7 +212,7 @@ def main():
         val_dataloaders=val_loader,
     )
 
-    joint_last_ckpt = joint_ckpt.last_model_path
+    joint_last_ckpt = joint_ckpt.best_model_path
     print(f"Joint-training done. Last checkpoint: {joint_last_ckpt}")
 
 
@@ -223,8 +223,8 @@ def main():
     print(" PHASE 2: FINE TUNING")
     print("==============================")
 
-    train_loader = create_data_loaders(cfg, "train","joint",32)
-    val_loader = create_data_loaders(cfg, "val","joint", 32)
+    train_loader = create_data_loaders(cfg, "train","tuning",32)
+    val_loader = create_data_loaders(cfg, "val","tuning", 32)
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples: {len(val_loader.dataset)}")
     if args.class_weights:

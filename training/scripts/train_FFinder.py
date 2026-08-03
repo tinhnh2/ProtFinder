@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Training script for FFinder model using Balanced Random Forest Classifier.
+Training script for FFinder model using XGBoost Classifier.
 
 Supports grid search for hyperparameter tuning and model saving.
 
@@ -15,7 +15,6 @@ from pathlib import Path
 import numpy as np
 import h5py
 import joblib
-from imblearn.ensemble import BalancedRandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score
@@ -81,7 +80,7 @@ def find_best_threshold(y_true, y_prob):
 
 def train_ffinder(config,enable_grid_search=False):
     """
-    Train FFinder model using Balanced Random Forest Classifier.
+    Train FFinder model using XGBoost Classifier.
     
     Args:
         config: Configuration dictionary
@@ -90,7 +89,7 @@ def train_ffinder(config,enable_grid_search=False):
 
     # Load train/val data from the same HDF5 file (different groups)
     print("Loading training and validation data")
-    train_val_h5_paths = config['data']['ffinder_train_val_h5_paths']
+    train_val_h5_paths = config['data']['train_val_h5_paths']
     if not train_val_h5_paths:
         raise ValueError("No train/val HDF5 paths specified in config")
     
@@ -106,12 +105,6 @@ def train_ffinder(config,enable_grid_search=False):
     scale_pos_weight = n_neg / n_pos
     print("scale_pos_weight =", scale_pos_weight)
     # Create classifier
-    base_clf2 = BalancedRandomForestClassifier(
-        n_estimators=config['training']['n_estimators'],
-        max_depth=config['training']['max_depth'],
-        random_state=config['training']['random_state'],
-        n_jobs=config['training']['n_jobs']
-    )
     # -----------------------------
     # XGBoost (model-aware)
     # -----------------------------

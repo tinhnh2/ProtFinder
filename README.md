@@ -1,10 +1,10 @@
-# Phylogenetic Model Selection via Machine Learning
+# ProtFinder: An efficient machine learning framework for protein model selection on real data
 
 Model selection is a fundamental step in phylogenetic analysis that determines the best-fit model of sequence evolution for a given multiple sequence alignment. Popular model selection methods, such as ModelFinder, rely on statistical information criteria, such as the Bayesian Information Criterion (BIC) or the Akaike Information Criterion (AIC).However, these approaches are computationally expensive and the use of information criteria has been the subject of ongoing discussion. Recently, machine learning has emerged as a promising approach for phylogenetic model selection in both nucleotide and protein sequence analyses. ModelDetector is currently the only machine learning-based method for amino acid substitution model selection. However, because ModelDetector was trained on simulated data, it does not perform well on real datasets. Another limitation is that it does not support different rate heterogeneity across sites (RHAS) models. To overcome these limitations, we introduce ProtFinder, an efficient machine learning framework for protein model selection that predicts amino acid substitution models, RHAS models, and amino acid frequency models. To enable ProtFinder to work with real datasets, we employed a transfer learning strategy consisting of three stages: (1) initial training on large-scale simulated data, (2) joint training on both simulated and real data, and (3) final fine-tuning using real data only. Experimental results show that ProtFinder outperformed ModelDetector in amino acid substitution model selection. ProtFinder achieved comparable accuracy to the maximum likelihood method ModelFinder for substitution model selection on medium and large MSAs. It performs slightly better than ModelFinder in RHAS model selection and substantially outperforms it in amino acid frequency model determination. Notably, ProtFinder is up to 1,400 times faster than ModelFinder in terms of inference time, making it particularly suitable for medium and large datasets.
 
 ## Project Overview
 
-The project consists of 5 main steps:
+The project consists of 7 main steps:
 
 1. **Empirical Distribution Fitting** - Fit inverse CDF distributions from real MSA parameters
 2. **Data Simulation** - Generate simulated MSAs using IQ-TREE Ali-Sim
@@ -70,6 +70,15 @@ python data_preparation/simulation.py \
     --output_dir ./simulated_alignments \
     --data_type test \
     --num_iterations 40
+	
+# Generate simulated msa set for joint training. Need merge the 15330 real MSAs to this set.
+python data_preparation/simulation.py \
+    --iqtree_path /usr/bin/iqtree3 \
+    --param_dir fitted_empirical_dist \
+    --trees_dir ./simulated_trees \
+    --output_dir ./simulated_alignments_joint \
+    --data_type train_val \
+    --num_iterations 10
 ```
 
 **Note**: The `--data_type` parameter automatically appends `_train_val` or `_test` suffix to output directories. For example, `./simulated_alignments` becomes `./simulated_alignments_train_val` or `./simulated_alignments_test`.
@@ -92,6 +101,13 @@ python data_preparation/feature_extraction.py \
     --output_dir ./extracted_features \
     --data_type test \
     --num_workers 7
+
+# Extract features from joint_training set
+python data_preparation/feature_extraction.py \
+    --alignments_dir ./simulated_alignments_joint \
+    --output_dir ./extracted_features \
+    --data_type train_val \
+    --num_workers 7
 ```
 
 **Note**: The `--data_type` parameter automatically appends suffix to input and output directories. Make sure to use the same `--data_type` as in Step 2.
@@ -108,7 +124,7 @@ Package features into HDF5 format. For training/validation sets, use `split_mode
 # Split training and validation set and package them
 python data_preparation/package_features.py \
     --qfinder_dir ./extracted_features_train_val/QFinder \
-    --rasfinder_dir ./extracted_features_train_val/RASFinder \
+    --rhasfinder_dir ./extracted_features_train_val/RHASFinder \
     --ffinder_dir ./extracted_features_train_val/FFinder \
     --output_dir ./hdf5_features \
     --split_mode random \
@@ -117,10 +133,19 @@ python data_preparation/package_features.py \
 # Package test set (no splitting)
 python data_preparation/package_features.py \
     --qfinder_dir ./extracted_features_test/QFinder \
-    --rasfinder_dir ./extracted_features_test/RASFinder \
+    --rhasfinder_dir ./extracted_features_test/RHASFinder \
     --ffinder_dir ./extracted_features_test/FFinder \
     --output_dir ./hdf5_features \
     --split_mode test
+	
+# Split joint training set and package them
+python data_preparation/package_features.py \
+    --qfinder_dir ./extracted_features_joint_train_val/QFinder \
+    --rhasfinder_dir ./extracted_features_joint_train_val/RHASFinder \
+    --ffinder_dir ./extracted_features_joint_train_val/FFinder \
+    --output_dir ./hdf5_features_joint \
+    --split_mode random \
+    --train_ratio 0.8
 ```
 
 **Note**: Unlike Steps 2 and 3, Step 4 requires manually specifying input feature directories. All output HDF5 files are saved in a single directory, distinguished by filenames (e.g., `*_train_val.h5` and `*_test.h5`). See `data_preparation/package_features.py` for details.
@@ -130,7 +155,7 @@ python data_preparation/package_features.py \
 ```bash
 python training/scripts/train_QFinder.py --config configs/QFinder_config.yaml
 
-python training/scripts/train_RASFinder.py --config configs/RASFinder_config.yaml
+python training/scripts/train_RHASFinder.py --config configs/RHASFinder_config.yaml
 
 python training/scripts/train_FFinder.py --config configs/FFinder_config.yaml
 ```
@@ -145,7 +170,7 @@ tensorboard --logdir lightning_logs/QFinder
 ```bash
 python tuning/tuning_QFinder.py --config configs/QFinder_config.yaml --pretrained_ckpt lightning_logs/QFinder/checkpoints/last.ckpt
 
-python tuning/tuning_RASFinder.py --config configs/RASFinder_config.yaml --pretrained_ckpt lightning_logs/RASFinder/checkpoints/last.ckpt
+python tuning/tuning_RHASFinder.py --config configs/RHASFinder_config.yaml --pretrained_ckpt lightning_logs/RHASFinder/checkpoints/last.ckpt
 
 python tuning/tuning_FFinder.py --config configs/FFinder_config.yaml
 ```
@@ -156,20 +181,20 @@ After training, the best model checkpoint path will be printed. Use that path fo
 ```bash
 # Test QFinder
 python testing/test_QFinder.py \
-    --checkpoint lightning_logs/QFinder/checkpoints/last.ckpt \
-    --test_h5_paths ./hdf5_features/QFinder_feature_test.h5 \
+    --pretrained_model lightning_logs/QFinder/checkpoints/last.ckpt \
+    --test_paths ./hdf5_features/QFinder_feature_test.h5 \
     --top_k 3
 
-# Test RASFinder
-python testing/test_RASFinder.py \
-    --checkpoint lightning_logs/RASFinder/checkpoints/last.ckpt \
-    --test_h5_paths ./hdf5_features/RASFinder_feature_test.h5 \
+# Test RHASFinder
+python testing/test_RHASFinder.py \
+    --pretrained_model lightning_logs/RHASFinder/checkpoints/last.ckpt \
+    --test_paths ./hdf5_features/RHASFinder_feature_test.h5 \
     --top_k 3
 
 # Test FFinder
 python testing/test_FFinder.py \
-    --checkpoint models/FFinder/FFinder_last.joblib \
-    --test_h5_paths ./hdf5_features/FFinder_feature_test.h5
+    --pretrained_model models/FFinder/FFinder_last.joblib \
+    --test_paths ./hdf5_features/FFinder_feature_test.h5
 ```
 
 Some metrices will be printed.
@@ -177,7 +202,7 @@ Some metrices will be printed.
 ## Project Structure
 
 ```
-model-selection-via-ML/
+ProtFinder/
 ├── data_preparation/          # Step 1-4: Data preparation scripts
 │   ├── empirical_dist.py      # Step 1: Fit empirical distributions
 │   ├── simulation.py          # Step 2: Generate simulated data
@@ -187,33 +212,33 @@ model-selection-via-ML/
 ├── training/                  # Step 5: Model training
 │   ├── modules/               # PyTorch Lightning modules
 │   │   ├── QFinder_lightning.py
-│   │   └── RASFinder_lightning.py
+│   │   └── RHASFinder_lightning.py
 │   └── scripts/               # Training scripts
 │       ├── train_QFinder.py
-│       ├── train_RASFinder.py
+│       ├── train_RHASFinder.py
 │       └── train_FFinder.py
 │
 ├── testing/                   # Step 6: Model testing
 │   ├── test_QFinder.py
-│   ├── test_RASFinder.py
+│   ├── test_RHASFinder.py
 │   ├── test_FFinder.py
 │   └── callbacks.py
 │
 ├── models/                    # Model definitions
 │   ├── QFinder.py
-│   └── RASFinder.py
+│   └── RHASFinder.py
 │
 ├── data/                      # Data processing modules
 │   └── datasets.py            # PyTorch Dataset classes
 │
 ├── configs/                   # Configuration files
 │   ├── QFinder_config.yaml
-│   ├── RASFinder_config.yaml
+│   ├── RHASFinder_config.yaml
 │   └── FFinder_config.yaml
 |
 ├── tuning/                   # Fine-tuning files
 │   ├── tuning_QFinder.py
-│   ├── tuning_RASFinder.py
+│   ├── tuning_RHASFinder.py
 │   └── tuning_FFinder.py
 │
 ├── empirical_parameters/      # Input CSV files for Step 1
@@ -241,7 +266,7 @@ Parameter files in `empirical_parameters/` contain model parameters from the Evo
 - **Architecture**: CNN with Squeeze-and-Excitation blocks
 - **Input**: QFinder feature reshaped to (440, 25, 25)
 
-### RASFinder
+### RHASFinder
 - **Task**: 4-class RHAS model classification
 - **Classes**: None, +G, +I, +G+I
 - **Architecture**: Transformer encoder-based network

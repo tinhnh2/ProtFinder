@@ -45,7 +45,7 @@ from scipy.spatial.distance import jensenshannon
 # Global random seed
 RANDOM_SEED = 723
 
-RASFinderFeatures = namedtuple('RASFinderFeatures', ['sitewise_feature', 'summary_feature'])
+RHASFinderFeatures = namedtuple('RHASFinderFeatures', ['sitewise_feature', 'summary_feature'])
 
 # Amino acid mapping to integer codes
 AMINO_ACID_MAP = {
@@ -266,28 +266,6 @@ def extract_entropy_features(entropy_values, gap_ratio_site):
         return np.zeros(10, dtype=np.float32)
     
     n_sites = len(entropy_values)
-    """
-    features = np.array([
-        np.sum(entropy_values == 0) / n_sites,  # Proportion of invariant sites
-        np.sum(entropy_values < 0.01) / n_sites,
-        np.sum(entropy_values < 0.1) / n_sites,
-        np.sum(entropy_values > 1.5) / n_sites,
-        entropy_values.mean(),
-        entropy_values.var(),
-        entropy_values.std(),
-        np.corrcoef(entropy_values[:-1], entropy_values[1:])[0,1]
-            if len(entropy_values) > 2 and entropy_values.std()>1e-6 else 0,
-        np.min(entropy_values),
-        gap_ratio_site.mean(),
-        np.percentile(entropy_values, 10),
-        np.percentile(entropy_values, 25),
-        np.percentile(entropy_values,90) - np.percentile(entropy_values,10),
-        np.median(entropy_values),
-        skew(entropy_values),
-        kurtosis(entropy_values),
-        bimodality_coefficient(entropy_values)
-    ], dtype=np.float32)
-    """
     features = np.array([
 		np.sum(entropy_values == 0) / n_sites,  # Proportion of invariant sites
         np.sum(entropy_values < 0.01) / n_sites,
@@ -295,7 +273,7 @@ def extract_entropy_features(entropy_values, gap_ratio_site):
         np.percentile(entropy_values, 10),
         np.percentile(entropy_values, 25),
         gap_ratio_site.mean(),
-        np.var(entropy_values),
+        np.var(entropy_values),#np.median(entropy_values)
         skew(entropy_values),
         kurtosis(entropy_values),
         bimodality_coefficient(entropy_values)
@@ -485,7 +463,7 @@ NUM_AA = len(AA_LIST)
 def kl_divergence(emp_freq, model_freq, eps=1e-10):
     """
     KL(empirical || model)
-    emp_freq, model_freq: list hoặc np.array, length = 20
+    emp_freq, model_freq: list or np.array, length = 20
     return: float
     """
     emp = np.asarray(emp_freq, dtype=np.float64)
@@ -592,11 +570,11 @@ def count_dominant_sites(msa, threshold=0.6):
 def extract_ffinder_features(msa, file_path):
     """
     Extract FFinder features based on alignment statistics.
-    Each alignment has 22 features:
+    Each alignment has 50 features:
     - 20 amino acid frequencies
     - Number of taxa
     - Number of sites
-    - KL divergence, JS divergence and relateive differences
+    - KL divergences, JS divergences and relateive differences
     
     Args:
         msa: MSA (with gaps)
