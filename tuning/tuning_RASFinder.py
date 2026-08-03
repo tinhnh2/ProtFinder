@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fine-tuning RASFinder model on real data using pretrained model
+Fine-tuning RHASFinder model on real data using pretrained model
 trained on simulation data.
 """
 
@@ -17,8 +17,8 @@ from collections import Counter
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from training.modules import RASFinderLightningModule
-from data import RASFinderDataset, collate_fn_rasfinder
+from training.modules import RHASFinderLightningModule
+from data import RHASFinderDataset, collate_fn_rhasfinder
 import torch
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -88,7 +88,7 @@ def compute_class_weights(y: np.ndarray, num_classes: int) -> torch.Tensor:
 
 
 def collect_labels(dataloader) -> np.ndarray:
-    """Collect all labels from a RASFinder DataLoader (batches: sitewise, summary, lengths, labels)."""
+    """Collect all labels from a RHASFinder DataLoader (batches: sitewise, summary, lengths, labels)."""
     all_labels = []
     for batch in dataloader:
         labels = batch[3]
@@ -101,9 +101,9 @@ def create_dataloader(config, group_name, data_type):
     if data_type == "tuning":
         h5_paths = config["data"]["real_h5_paths"]
     if not h5_paths:
-        raise ValueError("No real HDF5 paths provided for RASFinder")
+        raise ValueError("No real HDF5 paths provided for RHASFinder")
 
-    dataset = RASFinderDataset(
+    dataset = RHASFinderDataset(
         h5_paths=h5_paths,
         group_name=group_name
     )
@@ -114,7 +114,7 @@ def create_dataloader(config, group_name, data_type):
         shuffle=(group_name == "train"),
         num_workers=0,
         pin_memory=config["training"]["pin_memory"],
-        #collate_fn=collate_fn_rasfinder
+        #collate_fn=collate_fn_rhasfinder
 		collate_fn=make_collate_fn(
             max_seq_len=config["trainer"]["max_seq_len"]
         )
@@ -141,7 +141,7 @@ def freeze_transformer_backbone(model):
 # ------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Fine-tune RASFinder on real data"
+        description="Fine-tune RHASFinder on real data"
     )
 
     parser.add_argument(
@@ -155,7 +155,7 @@ def main():
         "--pretrained_ckpt",
         type=str,
         required=True,
-        help="Path to pretrained RASFinder checkpoint (.ckpt)"
+        help="Path to pretrained RHASFinder checkpoint (.ckpt)"
     )
 
     parser.add_argument(
@@ -178,7 +178,7 @@ def main():
     # Data
     # --------------------------------------------------------
     
-    print("Loading RASFinder dataset for joint training...")
+    print("Loading RHASFinder dataset for joint training...")
     train_loader = create_dataloader(config, "train", "joint")
     val_loader = create_dataloader(config, "val", "joint")
 
@@ -205,9 +205,9 @@ def main():
     # --------------------------------------------------------
     # Load pretrained model
     # --------------------------------------------------------
-    print("Loading pretrained RASFinder model...")
+    print("Loading pretrained RHASFinder model...")
 
-    model = RASFinderLightningModule.load_from_checkpoint(
+    model = RHASFinderLightningModule.load_from_checkpoint(
         checkpoint_path=args.pretrained_ckpt,
         input_dim=config["model"]["input_dim"],
         summary_dim=config["model"]["summary_dim"],
@@ -241,7 +241,7 @@ def main():
         dirpath=Path(config["logging"]["log_dir"])
         / config["logging"]["name"]
         / "checkpoints",
-        filename="RASFinder-joint-{epoch:02d}-{val_acc:.4f}",
+        filename="RHASFinder-joint-{epoch:02d}-{val_acc:.4f}",
         monitor="val_acc",
         mode="max",
         save_top_k=1,
@@ -326,9 +326,9 @@ def main():
     # --------------------------------------------------------
     # Load pretrained model
     # --------------------------------------------------------
-    print("Loading joint pretrained RASFinder model...")
+    print("Loading joint pretrained RHASFinder model...")
 
-    model = RASFinderLightningModule.load_from_checkpoint(
+    model = RHASFinderLightningModule.load_from_checkpoint(
         checkpoint_path=checkpoint_callback.best_model_path,
         input_dim=config["model"]["input_dim"],
         summary_dim=config["model"]["summary_dim"],
@@ -362,7 +362,7 @@ def main():
         dirpath=Path(config["logging"]["log_dir"])
         / config["logging"]["name"]
         / "checkpoints",
-        filename="RASFinder-finetune-{epoch:02d}-{val_acc:.4f}",
+        filename="RHASFinder-finetune-{epoch:02d}-{val_acc:.4f}",
         monitor="val_acc",
         mode="max",
         save_top_k=1,
@@ -407,7 +407,7 @@ def main():
     # --------------------------------------------------------
     # Fine-tune
     # --------------------------------------------------------
-    print("Starting RASFinder fine-tuning...")
+    print("Starting RHASFinder fine-tuning...")
     trainer.fit(
         model,
         train_dataloaders=train_loader,

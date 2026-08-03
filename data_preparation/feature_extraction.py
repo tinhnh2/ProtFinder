@@ -4,7 +4,7 @@ Extract features from MSA files for model training.
 
 This script extracts three types of features from MSA files:
 1. QFinder features: For QFinder model (7-class substitution model classification)
-2. RASFinder features: For RASFinder model (4-class RHAS model classification)
+2. RHASFinder features: For RHASFinder model (4-class RHAS model classification)
 3. FFinder features: For FFinder model (2-class +F classification)
 
 All extraction methods are optimized for extremely high efficiency.
@@ -342,9 +342,9 @@ def extract_qfinder_features(msa_filled, n_taxa, n_sites, rng):
     return features.astype(np.float32)
 
 
-def extract_rasfinder_features(msa):
+def extract_rhasfinder_features(msa):
     """
-    Extract RASFinder features based on sitewise and summary statistics.
+    Extract RHASFinder features based on sitewise and summary statistics.
     Each site has 23 features:
     - 20 amino acid frequencies
     - Entropy value of amino acid frequencies
@@ -356,7 +356,7 @@ def extract_rasfinder_features(msa):
         msa: MSA (with gaps)
     
     Returns:
-        RASFinderFeatures: A tuple containing sitewise and summary features.
+        RHASFinderFeatures: A tuple containing sitewise and summary features.
             - sitewise_features: Sitewise features of shape (n_sites, 23)
             - summary_features: Summary features of shape (10,)
     """
@@ -383,7 +383,7 @@ def extract_rasfinder_features(msa):
     sitewise_features = np.column_stack([site_frequencies, entropies, unique_aa_props, invariant_indicator]).astype(np.float32)
     summary_features = extract_entropy_features(entropies, gap_ratio_site)
     
-    return RASFinderFeatures(sitewise_features, summary_features)
+    return RHASFinderFeatures(sitewise_features, summary_features)
 
 
 BACKGROUND_FREQS = {
@@ -619,8 +619,8 @@ def extract_features_from_file(filename, alignments_dir, gap_rng, pair_rng):
     qfinder_features = extract_qfinder_features(msa_filled, n_taxa, n_sites, pair_rng)
     qfinder_time = time.perf_counter()
     
-    ras_features = extract_rasfinder_features(msa)
-    rasfinder_time = time.perf_counter()
+    rhas_features = extract_rhasfinder_features(msa)
+    rhasfinder_time = time.perf_counter()
     
     ffinder_features = extract_ffinder_features(msa, file_path)
     ffinder_time = time.perf_counter()
@@ -628,12 +628,12 @@ def extract_features_from_file(filename, alignments_dir, gap_rng, pair_rng):
     timing_info = {
         "conversion": conversion_time - start_time,
         "qfinder": qfinder_time - conversion_time,
-        "rasfinder": rasfinder_time - qfinder_time,
-        "ffinder": ffinder_time - rasfinder_time,
+        "rhasfinder": rhasfinder_time - qfinder_time,
+        "ffinder": ffinder_time - rhasfinder_time,
         "total": ffinder_time - start_time
     }
     
-    return qfinder_features, ras_features, ffinder_features, timing_info
+    return qfinder_features, rhas_features, ffinder_features, timing_info
 
 
 def extract_labels(filename):
@@ -645,13 +645,13 @@ def extract_labels(filename):
         filename: Filename to extract labels from
     
     Returns:
-        A tuple (label_ras, label_f) where:
-            - label_ras: RHAS model label (0-3)
+        A tuple (label_rhas, label_f) where:
+            - label_rhas: RHAS model label (0-3)
             - label_f: +F label (0-1)
     """
-    label_ras = int("+I" in filename) + 2 * int("+G" in filename)
+    label_rhas = int("+I" in filename) + 2 * int("+G" in filename)
     label_f = int("+F" in filename)
-    return label_ras, label_f
+    return label_rhas, label_f
 
 
 def process_single_file(filename, alignments_dir, output_dict):
@@ -661,7 +661,7 @@ def process_single_file(filename, alignments_dir, output_dict):
     Args:
         filename: Name of the .phy file
         alignments_dir: Directory containing alignment files
-        output_dict: Dictionary with keys 'feature_QFinder', 'feature_RASFinder', 'feature_FFinder' and values as Path objects
+        output_dict: Dictionary with keys 'feature_QFinder', 'feature_RHASFinder', 'feature_FFinder' and values as Path objects
     
     Returns:
         tuple: (file_basename, timing) or None if error
@@ -672,7 +672,7 @@ def process_single_file(filename, alignments_dir, output_dict):
         pair_rng = np.random.default_rng(RANDOM_SEED)
         
         # Extract all features
-        qfinder_features, ras_features, ffinder_features, timing_info = extract_features_from_file(
+        qfinder_features, rhas_features, ffinder_features, timing_info = extract_features_from_file(
             filename, alignments_dir, gap_rng, pair_rng
         )
         
@@ -684,10 +684,10 @@ def process_single_file(filename, alignments_dir, output_dict):
         qfinder_path = output_dict['feature_QFinder'] / f"{file_basename}.npy"
         np.save(qfinder_path, qfinder_features)
         
-        # Save RASFinder features
+        # Save RHASFinder features
         # Sitewise and summary features are saved together in a single .npz file
-        ras_path = output_dict['feature_RASFinder'] / f"{rhas_label}{file_basename[1:]}.npz"
-        np.savez(ras_path, sitewise=ras_features.sitewise_feature, summary=ras_features.summary_feature)
+        rhas_path = output_dict['feature_RHASFinder'] / f"{rhas_label}{file_basename[1:]}.npz"
+        np.savez(rhas_path, sitewise=rhas_features.sitewise_feature, summary=rhas_features.summary_feature)
         
         # Save FFinder features
         ffinder_path = output_dict['feature_FFinder'] / f"{f_label}{file_basename[1:]}.npy"
@@ -704,7 +704,7 @@ def process_single_file(filename, alignments_dir, output_dict):
 def main():
     """
     Processes all .phy alignment files in the specified directory, extracts
-    QFinder, RASFinder, and FFinder features, and saves them to output directories.
+    QFinder, RHASFinder, and FFinder features, and saves them to output directories.
     """
 
     parser = argparse.ArgumentParser(
@@ -759,7 +759,7 @@ def main():
     # Create output directory structure
     output_dict = {
         'feature_QFinder': output_dir / "QFinder",
-        'feature_RASFinder': output_dir / "RASFinder",
+        'feature_RHASFinder': output_dir / "RHASFinder",
         'feature_FFinder': output_dir / "FFinder"
     }
     

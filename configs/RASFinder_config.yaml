@@ -1,4 +1,4 @@
-# Configuration file for RASFinder model training
+# Configuration file for RHASFinder model training
 
 # Model parameters
 model:
@@ -36,9 +36,9 @@ early_stopping:
 
 # Data paths
 data:
-  train_val_h5_paths: [./hdf5_features/RASFinder_feature_train_val.h5]
-  joint_h5_paths: [./hdf5_features_joint/RASFinder_feature_train_val.h5]
-  real_h5_paths: [./hdf5_features_real_15330/RASFinder_feature_train_val.h5]
+  train_val_h5_paths: [./hdf5_features/RHASFinder_feature_train_val.h5]
+  joint_h5_paths: [./hdf5_features_joint/RHASFinder_feature_train_val.h5]
+  real_h5_paths: [./hdf5_features_real_15330/RHASFinder_feature_train_val.h5]
 
 # Training settings
 trainer:
@@ -59,7 +59,7 @@ checkpoint:
   save_top_k: 1
   monitor: "val_acc"
   mode: "max"
-  filename: "RASFinder-{epoch:02d}-{val_acc:.4f}"
+  filename: "RHASFinder-{epoch:02d}-{val_acc:.4f}"
   save_last: true
   every_n_epochs: 5
 
@@ -67,5 +67,5 @@ checkpoint:
 logging:
   logger: "tensorboard"
   log_dir: "lightning_logs"
-  name: "RASFinder"
+  name: "RHASFinder"
 

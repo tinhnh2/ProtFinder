@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Training script for RASFinder model using PyTorch Lightning.
+Training script for RHASFinder model using PyTorch Lightning.
 
 Usage:
-    python training/scripts/train_RASFinder.py --config configs/RASFinder_config.yaml
-    python training/scripts/train_RASFinder.py --config configs/RASFinder_config.yaml --resume_from_checkpoint path/to/checkpoint.ckpt
+    python training/scripts/train_RHASFinder.py --config configs/RHASFinder_config.yaml
+    python training/scripts/train_RHASFinder.py --config configs/RHASFinder_config.yaml --resume_from_checkpoint path/to/checkpoint.ckpt
 """
 import argparse
 import yaml
@@ -19,8 +19,8 @@ import sys
 from collections import Counter
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from training.modules import RASFinderLightningModule
-from data import RASFinderDataset, collate_fn_rasfinder
+from training.modules import RHASFinderLightningModule
+from data import RHASFinderDataset, collate_fn_rhasfinder
 
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -64,13 +64,13 @@ def create_data_loaders(config, group_name= "train"):
     Returns:
         DataLoader instance
     """
-    # Use rasfinder_train_val_h5_paths for both train and val groups
+    # Use rhasfinder_train_val_h5_paths for both train and val groups
     h5_paths = config['data']['train_val_h5_paths']
     
     if not h5_paths:
         raise ValueError(f"No HDF5 paths specified for {group_name} set")
     
-    dataset = RASFinderDataset(h5_paths=h5_paths, group_name=group_name)
+    dataset = RHASFinderDataset(h5_paths=h5_paths, group_name=group_name)
     
     is_training = (group_name == "train")
     
@@ -81,14 +81,14 @@ def create_data_loaders(config, group_name= "train"):
         num_workers=0,  # Must be 0 for HDF5 files
         pin_memory=config['training']['pin_memory'],
         persistent_workers=False,
-        collate_fn=collate_fn_rasfinder  # Handle variable-length sequences
+        collate_fn=collate_fn_rhasfinder  # Handle variable-length sequences
     )
     
     return dataloader
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train RASFinder model")
+    parser = argparse.ArgumentParser(description="Train RHASFinder model")
     parser.add_argument(
         "--config",
         type=str,
@@ -142,7 +142,7 @@ def main():
     
     # Create model
     print("Creating model")
-    model = RASFinderLightningModule(
+    model = RHASFinderLightningModule(
         input_dim= config['model']['input_dim'],
         summary_dim=config['model']['summary_dim'],
         num_classes=config['model']['num_classes'],

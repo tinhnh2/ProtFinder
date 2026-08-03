@@ -14,8 +14,8 @@ Therefore, the HDF5 files either contain train and val groups, or test group onl
 The script creates the following HDF5 files:
 - QFinder_feature_train_val.h5
 - QFinder_feature_test.h5 (if split_mode is test)
-- RASFinder_feature_train_val.h5
-- RASFinder_feature_test.h5 (if split_mode is test)
+- RHASFinder_feature_train_val.h5
+- RHASFinder_feature_test.h5 (if split_mode is test)
 - FFinder_feature_train_val.h5
 - FFinder_feature_test.h5 (if split_mode is test)
 
@@ -23,7 +23,7 @@ Usage:
     # For train/val split by iteration number:
     python data_preparation/package_features.py \
         --qfinder_dir ./extracted_features_train_val/QFinder \
-        --rasfinder_dir ./extracted_features_train_val/RASFinder \
+        --rhasfinder_dir ./extracted_features_train_val/RHASFinder \
         --ffinder_dir ./extracted_features_train_val/FFinder \
         --output_dir ./hdf5_features \
         --split_mode iteration \
@@ -32,7 +32,7 @@ Usage:
     # For train/val split by random:
     python data_preparation/package_features.py \
         --qfinder_dir ./extracted_features_train_val/QFinder \
-        --rasfinder_dir ./extracted_features_train_val/RASFinder \
+        --rhasfinder_dir ./extracted_features_train_val/RHASFinder \
         --ffinder_dir ./extracted_features_train_val/FFinder \
         --output_dir ./hdf5_features \
         --split_mode random \
@@ -42,7 +42,7 @@ Usage:
     # For test set (no splitting):
     python data_preparation/package_features.py \
         --qfinder_dir ./extracted_features_test/QFinder \
-        --rasfinder_dir ./extracted_features_test/RASFinder \
+        --rhasfinder_dir ./extracted_features_test/RHASFinder \
         --ffinder_dir ./extracted_features_test/FFinder \
         --output_dir ./hdf5_features \
         --split_mode test
@@ -164,18 +164,18 @@ def package_to_hdf5(feature_dir, output_path, groups_dict, key_extractor):
     return saved_counts
 
 
-def find_rasfinder_files(rasfinder_dir):
+def find_rhasfinder_files(rhasfinder_dir):
     """
-    Find all RASFinder .npz files in directory.
+    Find all RHASFinder .npz files in directory.
     
     Args:
-        rasfinder_dir: Directory containing RASFinder features
+        rhasfinder_dir: Directory containing RHASFinder features
     
     Returns:
         Dictionary mapping base_name to filename
     """
-    rasfinder_dir = Path(rasfinder_dir)
-    all_files = [f for f in rasfinder_dir.glob("*.npz")]
+    rhasfinder_dir = Path(rhasfinder_dir)
+    all_files = [f for f in rhasfinder_dir.glob("*.npz")]
     
     return {f.stem: f.name for f in all_files}
 
@@ -198,19 +198,19 @@ def package_qfinder_features(qfinder_dir, output_path, groups_dict):
         print(f"Saved {count} samples to {group_name} group")
 
 
-def package_rasfinder_features(rasfinder_dir, output_path, groups_dict, file_dict):
+def package_rhasfinder_features(rhasfinder_dir, output_path, groups_dict, file_dict):
     """
-    Package RASFinder features (sitewise and summary) into a single HDF5 file.
+    Package RHASFinder features (sitewise and summary) into a single HDF5 file.
     
     Each sample is stored as a group containing both sitewise and summary features.
     
     Args:
-        rasfinder_dir: Directory containing RASFinder .npz files
+        rhasfinder_dir: Directory containing RHASFinder .npz files
         output_path: Path to output HDF5 file
         groups_dict: Dictionary mapping group names to base name lists
         file_dict: Dictionary mapping base_name to filename (to avoid redundant file lookup)
     """
-    rasfinder_dir = Path(rasfinder_dir)
+    rhasfinder_dir = Path(rhasfinder_dir)
     saved_counts = {}
     
     with h5py.File(output_path, "w") as h5:
@@ -222,7 +222,7 @@ def package_rasfinder_features(rasfinder_dir, output_path, groups_dict, file_dic
                 if base_name not in file_dict:
                     continue
                 
-                npz_path = rasfinder_dir / file_dict[base_name]
+                npz_path = rhasfinder_dir / file_dict[base_name]
                 if npz_path.exists():
                     npz_data = np.load(npz_path)
                     sample_group = split_group.create_group(base_name)
@@ -280,7 +280,7 @@ def split_files_by_mode(files, split_mode, split_threshold=None, train_ratio=0.8
 
 def package_features(
     qfinder_dir,
-    rasfinder_dir,
+    rhasfinder_dir,
     ffinder_dir,
     output_dir,
     split_mode="iteration",
@@ -293,7 +293,7 @@ def package_features(
     
     Args:
         qfinder_dir: Directory with QFinder features
-        rasfinder_dir: Directory with RASFinder features
+        rhasfinder_dir: Directory with RHASFinder features
         ffinder_dir: Directory with FFinder features
         output_dir: Directory to save HDF5 files
         split_mode: "iteration" (split by iteration number) or "random" (random split) or "test" (test set only)
@@ -302,7 +302,7 @@ def package_features(
         seed: Random seed (used when split_mode="random")
     """
     qfinder_dir = Path(qfinder_dir)
-    rasfinder_dir = Path(rasfinder_dir)
+    rhasfinder_dir = Path(rhasfinder_dir)
     ffinder_dir = Path(ffinder_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -330,12 +330,12 @@ def package_features(
     
     package_qfinder_features(qfinder_dir, output_dir / f"QFinder_feature{file_suffix}.h5", qfinder_groups)
    
-    # Process RASFinder features
+    # Process RHASFinder features
     # Find files once and reuse the dictionary
-    rasfinder_file_dict = find_rasfinder_files(rasfinder_dir)
-    rasfinder_bases = sorted(rasfinder_file_dict.keys())
-    rasfinder_groups = split_files_by_mode(rasfinder_bases, split_mode, split_threshold, train_ratio, seed)
-    package_rasfinder_features(rasfinder_dir, output_dir / f"RASFinder_feature{file_suffix}.h5", rasfinder_groups, rasfinder_file_dict)
+    rhasfinder_file_dict = find_rhasfinder_files(rhasfinder_dir)
+    rhasfinder_bases = sorted(rhasfinder_file_dict.keys())
+    rhasfinder_groups = split_files_by_mode(rhasfinder_bases, split_mode, split_threshold, train_ratio, seed)
+    package_rhasfinder_features(rhasfinder_dir, output_dir / f"RHASFinder_feature{file_suffix}.h5", rhasfinder_groups, rhasfinder_file_dict)
     
     # Process FFinder features
     ffinder_files = sorted([f.name for f in ffinder_dir.glob("*.npy")])
@@ -353,10 +353,10 @@ def main():
         help="Directory with QFinder features"
     )
     parser.add_argument(
-        "--rasfinder_dir",
+        "--rhasfinder_dir",
         type=str,
         required=True,
-        help="Directory with RASFinder features"
+        help="Directory with RHASFinder features"
     )
     parser.add_argument(
         "--ffinder_dir",
@@ -401,7 +401,7 @@ def main():
     
     package_features(
         qfinder_dir=args.qfinder_dir,
-        rasfinder_dir=args.rasfinder_dir,
+        rhasfinder_dir=args.rhasfinder_dir,
         ffinder_dir=args.ffinder_dir,
         output_dir=args.output_dir,
         split_mode=args.split_mode,

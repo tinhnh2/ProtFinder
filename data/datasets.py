@@ -79,9 +79,9 @@ class QFinderDataset(Dataset):
                 pass
 
 
-class RASFinderDataset(Dataset):
+class RHASFinderDataset(Dataset):
     """
-    Dataset for RASFinder model: loads RASFinder features from HDF5 files.
+    Dataset for RHASFinder model: loads RHASFinder features from HDF5 files.
     
     Each sample contains:
     - Sitewise features: (n_sites, 23) array
@@ -164,9 +164,9 @@ class RASFinderDataset(Dataset):
                 pass
 
 
-def collate_fn_rasfinder(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def collate_fn_rhasfinder(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Collate function for RASFinderDataset to handle variable-length sequences.
+    Collate function for RHASFinderDataset to handle variable-length sequences.
     
     Pads sitewise features to the same length within a batch.
     
