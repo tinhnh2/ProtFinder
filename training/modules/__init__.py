@@ -3,6 +3,6 @@ PyTorch Lightning modules for training models.
 """
 
 from .QFinder_lightning import QFinderLightningModule
-from .RASFinder_lightning import RASFinderLightningModule
+from .RHASFinder_lightning import RHASFinderLightningModule
 
-__all__ = ['QFinderLightningModule', 'RASFinderLightningModule']
+__all__ = ['QFinderLightningModule', 'RHASFinderLightningModule']

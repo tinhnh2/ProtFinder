@@ -3,6 +3,6 @@ Model definitions for phylogenetic model selection.
 """
 
 from .QFinder import QFinderModel
-from .RASFinder import RASFinderModel
+from .RHASFinder import RHASFinderModel
 
-__all__ = ['QFinderModel', 'RASFinderModel']
+__all__ = ['QFinderModel', 'RHASFinderModel']
