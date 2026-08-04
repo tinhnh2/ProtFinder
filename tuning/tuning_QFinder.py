@@ -8,7 +8,7 @@ import yaml
 from pathlib import Path
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from collections import Counter
 import torch
@@ -195,14 +195,23 @@ def main():
     )
 
     joint_ckpt = ckpt_callback(ckpt_dir, "joint")
-
+    callbacks = []
+    callbacks.append(joint_ckpt)
+    early_stopping = EarlyStopping(
+        monitor="val_acc",
+        mode="max",
+        patience=cfg["early_stopping"]["patience"],
+        min_delta=cfg["early_stopping"]["min_delta"],
+        verbose=True
+    )
+    callbacks.append(early_stopping)
     trainer = pl.Trainer(
         accelerator=cfg["trainer"]["accelerator"],
         devices=cfg["trainer"]["devices"],
         precision=cfg["trainer"]["precision"],
         max_epochs=cfg["trainer"]["max_epochs_joint"],
         logger=joint_logger,
-        callbacks=[joint_ckpt],
+        callbacks=callbacks,
         log_every_n_steps=20,
     )
 
@@ -251,14 +260,23 @@ def main():
     thaw_top_conv_blocks(model, n_blocks=1)
 
     freeze_ckpt = ckpt_callback(ckpt_dir, "finetune")
-
+    callbacks = []
+    callbacks.append(freeze_ckpt)
+    early_stopping = EarlyStopping(
+        monitor="val_acc",
+        mode="max",
+        patience=cfg["early_stopping"]["patience"],
+        min_delta=cfg["early_stopping"]["min_delta"],
+        verbose=True
+    )
+    callbacks.append(early_stopping)
     trainer = pl.Trainer(
         accelerator=cfg["trainer"]["accelerator"],
         devices=cfg["trainer"]["devices"],
         precision=cfg["trainer"]["precision"],
         max_epochs=cfg["trainer"]["max_epochs_tuning"],
         logger=finetune_logger,
-        callbacks=[freeze_ckpt],
+        callbacks=callbacks,
     )
     
     trainer.fit(model, train_loader, val_loader)
