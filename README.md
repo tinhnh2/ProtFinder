@@ -73,7 +73,7 @@ python data_preparation/simulation.py \
 	
 # Generate simulated msa set for joint training. Need merge the 15330 real MSAs to this set.
 python data_preparation/simulation.py \
-    --iqtree_path /usr/bin/iqtree3 \
+    --iqtree_path iqtree3 \
     --param_dir fitted_empirical_dist \
     --trees_dir ./simulated_trees \
     --output_dir ./simulated_alignments_joint \
