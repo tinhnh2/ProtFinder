@@ -55,7 +55,7 @@ Generate training/validation set and test set separately, because **the test set
 ```bash
 # Generate training/validation set
 python data_preparation/simulation.py \
-    --iqtree_path /usr/bin/iqtree3 \
+    --iqtree_path iqtree3 \
     --param_dir fitted_empirical_dist \
     --trees_dir ./simulated_trees \
     --output_dir ./simulated_alignments \
@@ -64,7 +64,7 @@ python data_preparation/simulation.py \
 
 # Generate test set
 python data_preparation/simulation.py \
-    --iqtree_path /usr/bin/iqtree3 \
+    --iqtree_path iqtree3 \
     --param_dir fitted_empirical_dist \
     --trees_dir ./simulated_trees \
     --output_dir ./simulated_alignments \
@@ -108,6 +108,20 @@ python data_preparation/feature_extraction.py \
     --output_dir ./extracted_features \
     --data_type train_val \
     --num_workers 7
+
+# Extract features from real set. Unziping the zip hssp1471_best_fit.zip before executing the command.
+python data_preparation/feature_extraction.py \
+--alignments_dir ./real_alignments_15330 \
+--output_dir ./extracted_features_tuning \
+--data_type train_val \
+--num_workers 7
+
+# Extract features from real 1471 HSSP test set. Unziping the zip hssp1471_best_fit.zip before executing the command.
+python data_preparation/feature_extraction.py \
+    --alignments_dir ./hssp1471_best_fit \
+    --output_dir ./extracted_features_hssp1471 \
+    --data_type test \
+    --num_workers 7
 ```
 
 **Note**: The `--data_type` parameter automatically appends suffix to input and output directories. Make sure to use the same `--data_type` as in Step 2.
@@ -146,6 +160,23 @@ python data_preparation/package_features.py \
     --output_dir ./hdf5_features_joint \
     --split_mode random \
     --train_ratio 0.8
+	
+# Split tuning set and package them
+python data_preparation/package_features.py \
+    --qfinder_dir ./extracted_features_tuning_train_val/QFinder \
+    --rhasfinder_dir ./extracted_features_tuning_train_val/RHASFinder \
+    --ffinder_dir ./extracted_features_tuning_train_val/FFinder \
+    --output_dir ./hdf5_features_tuning \
+    --split_mode random \
+    --train_ratio 0.8
+	
+# Package real HSSP test set (no splitting)
+python data_preparation/package_features.py \
+    --qfinder_dir ./extracted_features_hssp1471_test/QFinder \
+    --rhasfinder_dir ./extracted_features_hssp1471_test/RHASFinder \
+    --ffinder_dir ./extracted_features_hssp1471_test/FFinder \
+    --output_dir ./hdf5_features_hssp1471 \
+    --split_mode test
 ```
 
 **Note**: Unlike Steps 2 and 3, Step 4 requires manually specifying input feature directories. All output HDF5 files are saved in a single directory, distinguished by filenames (e.g., `*_train_val.h5` and `*_test.h5`). See `data_preparation/package_features.py` for details.
@@ -218,7 +249,12 @@ ProtFinder/
 │       ├── train_RHASFinder.py
 │       └── train_FFinder.py
 │
-├── testing/                   # Step 6: Model testing
+├── tuning/                   # Step 6: Fine-tuning files
+│   ├── tuning_QFinder.py
+│   ├── tuning_RHASFinder.py
+│   └── tuning_FFinder.py
+│
+├── testing/                   # Step 7: Model testing
 │   ├── test_QFinder.py
 │   ├── test_RHASFinder.py
 │   ├── test_FFinder.py
@@ -235,17 +271,12 @@ ProtFinder/
 │   ├── QFinder_config.yaml
 │   ├── RHASFinder_config.yaml
 │   └── FFinder_config.yaml
-|
-├── tuning/                   # Fine-tuning files
-│   ├── tuning_QFinder.py
-│   ├── tuning_RHASFinder.py
-│   └── tuning_FFinder.py
 │
 ├── empirical_parameters/      # Input CSV files for Step 1
 ├── fitted_empirical_dist/     # Output .npz files from Step 1
-├── real_alignments_15330/     # 15330 real MSA data, extracted from zip files
-├── hssp1471				   # 1471 real HSSP MSA data, extracted from zip files
-├── pyproject.toml             # Project configuration
+├── real_alignments_15330_train_val/     # 15330 real MSA data, extracted from zip files
+├── hssp1471_test				  		 # 1471 real HSSP MSA data, extracted from zip files
+├── pyproject.toml            			 # Project configuration
 └── README.md
 ```
 
