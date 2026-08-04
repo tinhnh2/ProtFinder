@@ -69,7 +69,7 @@ def create_data_loaders(config, group_name="train", action="joint", batch_size=6
     if action=="joint":
         h5_paths = config['data']['joint_h5_paths']
     if action=="tuning":
-        h5_paths = config['data']['tuning_h5_paths']
+        h5_paths = config['data']['real_h5_paths']
     if not h5_paths:
         raise ValueError(f"No HDF5 paths specified for {group_name} set")
 

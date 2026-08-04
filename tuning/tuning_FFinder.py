@@ -67,7 +67,7 @@ def tuning_FFinder(config, retuning = False):
     # Load train/val data from the same HDF5 file (different groups)
     print("Loading training and validation data")
     train_val_h5_paths = config['data']['joint_h5_paths']
-    tuning_h5_paths = config['data']['tuning_h5_paths']
+    tuning_h5_paths = config['data']['real_h5_paths']
     if not train_val_h5_paths or not tuning_h5_paths:
         raise ValueError("No train/val HDF5 paths specified in config")
 

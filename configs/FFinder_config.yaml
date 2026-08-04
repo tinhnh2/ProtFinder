@@ -24,7 +24,7 @@ training:
 data:
   train_val_h5_paths: [./hdf5_features/FFinder_feature_train_val.h5]  # HDF5 file containing train and val groups
   joint_h5_paths: [./hdf5_features_joint/FFinder_feature_train_val.h5]  # HDF5 file containing train and val groups
-  tuning_h5_paths: [./hdf5_features_real_15330/FFinder_feature_train_val.h5]
+  real_h5_paths: [./hdf5_features_tuning/FFinder_feature_train_val.h5]
 
 # Model saving
 model_saving:
