@@ -87,39 +87,84 @@ def create_data_loaders(config, group_name="train", action="joint", batch_size=6
 
     return dataloader
 
-def freeze_backbone(model):
-    """
-    Freeze all convolution + SE layers, keep FC trainable
-    """
-    for name, param in model.model.named_parameters():
-        if not name.startswith("fc"):
-            param.requires_grad = False
-
 # ------------------------------------------------------------
 # FREEZE / THAW for CNN
 # ------------------------------------------------------------
-def freeze_all_conv(model):
+# QFinderModel's actual submodule names (see QFinder.py) are
+# conv1, se1, conv2, se2, conv3, se3, conv4, se4, avgpool, fc
+# — NOT "conv_block1", "conv_block2", ... The previous version of
+# these functions filtered on the substring "block", which never
+# matched anything, so thaw_top_conv_blocks() was a silent no-op.
+#
+# Block 1 (conv1+se1) is closest to the input (most generic features).
+# Block 4 (conv4+se4) is closest to the classifier (most task/domain
+# specific) — this is the one we want to thaw first for fine-tuning.
+_N_BLOCKS = 4
+
+
+def _block_modules(model, block_id: int):
+    """Return the (conv_i, se_i) submodule pair for a given block id (1-4)."""
+    conv_mod = getattr(model.model, f"conv{block_id}")
+    se_mod = getattr(model.model, f"se{block_id}")
+    return conv_mod, se_mod
+
+
+def freeze_backbone(model):
     """
-    Freeze all convolutional layers, keep classifier trainable
+    Freeze all conv+SE blocks, keep FC trainable.
+
+    Freezing here means two things, both necessary:
+    1. requires_grad=False on every parameter, so no gradient updates
+       the weights.
+    2. .eval() on every frozen submodule, so BatchNorm layers STOP
+       updating running_mean/running_var from the fine-tuning data.
+       requires_grad alone does NOT stop this: running stats are
+       buffers, not parameters, and get updated on every forward pass
+       while the module is in train() mode.
+
+    The frozen submodules are registered via model.set_frozen_modules()
+    so that PyTorch Lightning's automatic model.train() calls (once per
+    epoch) don't silently put them back into train mode.
     """
-    for name, module in model.model.named_modules():
-        if "conv" in name or "block" in name:
-            for p in module.parameters():
-                p.requires_grad = False
+    frozen_modules = []
+    for block_id in range(1, _N_BLOCKS + 1):
+        conv_mod, se_mod = _block_modules(model, block_id)
+        for p in conv_mod.parameters():
+            p.requires_grad = False
+        for p in se_mod.parameters():
+            p.requires_grad = False
+        conv_mod.eval()
+        se_mod.eval()
+        frozen_modules.extend([conv_mod, se_mod])
+
+    model.set_frozen_modules(frozen_modules)
+
 
 def thaw_top_conv_blocks(model, n_blocks=1):
     """
-    Unfreeze top convolutional blocks
-    Assumes blocks are named: conv_block1, conv_block2, ...
+    Unfreeze the n_blocks conv+SE pairs closest to the classifier
+    (block4 first, then block3, ...). Must be called AFTER
+    freeze_backbone(model).
     """
-    blocks = [
-        (name, m) for name, m in model.model.named_modules()
-        if "block" in name
-    ]
-    blocks = sorted(blocks, key=lambda x: x[0])
-    for name, block in blocks[-n_blocks:]:
-        for p in block.parameters():
+    if n_blocks < 1 or n_blocks > _N_BLOCKS:
+        raise ValueError(f"n_blocks must be between 1 and {_N_BLOCKS}, got {n_blocks}")
+
+    top_block_ids = range(_N_BLOCKS, _N_BLOCKS - n_blocks, -1)  # e.g. n_blocks=1 -> [4]
+
+    still_frozen = list(model._frozen_modules)
+    for block_id in top_block_ids:
+        conv_mod, se_mod = _block_modules(model, block_id)
+        for p in conv_mod.parameters():
             p.requires_grad = True
+        for p in se_mod.parameters():
+            p.requires_grad = True
+        conv_mod.train()
+        se_mod.train()
+        # No longer frozen -> remove from the "pin to eval()" list so
+        # future automatic .train() calls keep training its BatchNorm.
+        still_frozen = [m for m in still_frozen if m is not conv_mod and m is not se_mod]
+
+    model.set_frozen_modules(still_frozen)
 
 def compute_class_weights(dataset, num_classes):
     """
@@ -205,6 +250,7 @@ def main():
         verbose=True
     )
     callbacks.append(early_stopping)
+
     trainer = pl.Trainer(
         accelerator=cfg["trainer"]["accelerator"],
         devices=cfg["trainer"]["devices"],
@@ -260,6 +306,7 @@ def main():
     thaw_top_conv_blocks(model, n_blocks=1)
 
     freeze_ckpt = ckpt_callback(ckpt_dir, "finetune")
+
     callbacks = []
     callbacks.append(freeze_ckpt)
     early_stopping = EarlyStopping(
@@ -289,4 +336,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

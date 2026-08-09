@@ -51,6 +51,12 @@ class QFinderLightningModule(pl.LightningModule):
         
         # Model
         self.model = QFinderModel(num_classes=num_classes)
+
+        # Submodules that should stay in eval() mode (BatchNorm running
+        # stats frozen) even though PyTorch Lightning calls .train()
+        # automatically at the start of every epoch. Populated by
+        # set_frozen_modules() during fine-tuning (see tuning_QFinder.py).
+        self._frozen_modules = []
         
         # Loss function
         #self.criterion = nn.CrossEntropyLoss()
@@ -71,6 +77,38 @@ class QFinderLightningModule(pl.LightningModule):
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_mode = lr_scheduler_mode
     
+
+    def set_frozen_modules(self, modules):
+        """
+        Register submodules that must remain in eval() mode (i.e. their
+        BatchNorm layers stop updating running_mean/running_var) even
+        when Lightning calls `self.train()` again at the start of the
+        next epoch. Call this AFTER setting requires_grad=False on the
+        target parameters (see freeze_backbone in tuning_QFinder.py).
+
+        Pass an empty list / call with [] to clear (e.g. when nothing
+        should be pinned to eval mode anymore).
+        """
+        self._frozen_modules = list(modules)
+
+    def train(self, mode: bool = True):
+        """
+        Override nn.Module.train() so that submodules registered via
+        set_frozen_modules() are pinned back to eval() mode every time
+        .train() is called (which happens automatically once per epoch
+        under PyTorch Lightning, undoing any one-off .eval() call).
+
+        Without this override, requires_grad=False alone is NOT enough
+        to truly freeze a block that contains BatchNorm: the weights
+        won't get gradient updates, but running_mean/running_var are
+        buffers (not parameters) and keep drifting toward the
+        fine-tuning data distribution every forward pass in train mode.
+        """
+        super().train(mode)
+        if mode:
+            for m in self._frozen_modules:
+                m.eval()
+        return self
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
@@ -144,8 +182,13 @@ class QFinderLightningModule(pl.LightningModule):
         Returns:
             Dictionary with optimizer and lr_scheduler
         """
+        # Only pass trainable parameters. This is not strictly required
+        # for correctness (AdamW already skips params whose .grad is
+        # None), but avoids allocating unnecessary optimizer state
+        # (momentum buffers) for frozen parameters during fine-tuning.
+        trainable_params = filter(lambda p: p.requires_grad, self.parameters())
         optimizer = torch.optim.AdamW(
-            self.parameters(),
+            trainable_params,
             lr=self.hparams.learning_rate,
             weight_decay=self.hparams.weight_decay
         )
