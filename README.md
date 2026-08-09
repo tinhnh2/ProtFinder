@@ -111,10 +111,10 @@ python data_preparation/feature_extraction.py \
 
 # Extract features from real set. Unziping the zip hssp1471_best_fit.zip before executing the command.
 python data_preparation/feature_extraction.py \
---alignments_dir ./real_alignments_15330 \
---output_dir ./extracted_features_tuning \
---data_type train_val \
---num_workers 7
+	--alignments_dir ./real_alignments_15330 \
+	--output_dir ./extracted_features_tuning \
+	--data_type train_val \
+	--num_workers 7
 
 # Extract features from real 1471 HSSP test set. Unziping the zip hssp1471_best_fit.zip before executing the command.
 python data_preparation/feature_extraction.py \
@@ -207,7 +207,7 @@ python tuning/tuning_FFinder.py --config configs/FFinder_config.yaml
 ```
 ### Step 7: Test Models
 
-After training, the best model checkpoint path will be printed. Use that path for testing.
+After training, the best model checkpoint path will be printed. Use that path for testing. Here, We uploaded pretrained model to test directly.
 
 ```bash
 # Test QFinder
