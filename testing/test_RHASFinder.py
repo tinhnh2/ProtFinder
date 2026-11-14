@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from training.modules import RASFinderLightningModule
-from data import RASFinderDataset, collate_fn_rasfinder
+from training.modules import RHASFinderLightningModule
+from data import RHASFinderDataset, collate_fn_rhasfinder
 from testing.callbacks import PredictionCollector
 import torch
 torch.backends.cudnn.benchmark = True
@@ -38,14 +38,14 @@ def create_data_loader(test_h5_paths, batch_size):
     Returns:
         DataLoader instance
     """
-    test_dataset = RASFinderDataset(h5_paths=test_h5_paths,group_name="test")
+    test_dataset = RHASFinderDataset(h5_paths=test_h5_paths,group_name="test")
     
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=0,  # Must be 0 for HDF5 files
-        collate_fn=collate_fn_rasfinder
+        collate_fn=collate_fn_rhasfinder
     )
     
     return test_loader
@@ -56,7 +56,7 @@ def topk_accuracy(y_true, y_prob, k=3):
     topk = np.argsort(y_prob, axis=1)[:, -k:]
     return np.mean([y in topk[i] for i, y in enumerate(y_true)])
 
-def test_RASFinder(
+def test_RHASFinder(
     checkpoint_path: str,
     test_h5_paths: list,
     batch_size: int,
@@ -72,7 +72,7 @@ def test_RASFinder(
     """
     # Load model from checkpoint
     print(f"Loading model from checkpoint: {checkpoint_path}")
-    model = RASFinderLightningModule.load_from_checkpoint(checkpoint_path)
+    model = RHASFinderLightningModule.load_from_checkpoint(checkpoint_path)
     
     # Create test data loader
     print("Loading test data")
@@ -115,8 +115,8 @@ def test_RASFinder(
     })
 
     df["correct"] = (df["true_label"] == df["predicted_label"])
-    df.to_csv("results_rasfinder.csv", index=False)
-    print("Saved results to results_rasfinder.csv")
+    df.to_csv("results_rhasfinder.csv", index=False)
+    print("Saved results to results_rhasfinder.csv")
     # Generate classification report
     report_str = classification_report(
         all_labels,
@@ -186,7 +186,7 @@ def main():
     
     import time
     start_total = time.perf_counter()
-    test_RASFinder(
+    test_RHASFinder(
         checkpoint_path=args.pretrained_model,
         test_h5_paths=args.test_paths,
         batch_size=args.batch_size,
