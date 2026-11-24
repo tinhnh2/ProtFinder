@@ -105,7 +105,7 @@ python data_preparation/feature_extraction.py \
 # Extract features from joint_training set
 python data_preparation/feature_extraction.py \
     --alignments_dir ./simulated_alignments_joint \
-    --output_dir ./extracted_features \
+    --output_dir ./extracted_features_joint \
     --data_type train_val \
     --num_workers 7
 
@@ -279,6 +279,10 @@ ProtFinder/
 ├── pyproject.toml            			 # Project configuration
 └── README.md
 ```
+
+## Command to use ModelFinder
+
+iqtree3 -seed 1234 -T 9 -s test.phy --prefix test -m MF -mset "LG,WAG,JTT,Q.plant,Q.bird,Q.mammal,Q.pfam" -mrate E,I,G,I+G
 
 ## Parameter Files
 
